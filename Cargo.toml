@@ -1,0 +1,14 @@
+[package]
+name = "goldilocks-ntt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.151", optional = true }
+
+[dev-dependencies]
+criterion = "0.4.0"
+proptest = "1.0.0"
+rand = "0.8.5"
