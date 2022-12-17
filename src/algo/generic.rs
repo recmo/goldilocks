@@ -100,6 +100,7 @@ pub(crate) fn omega(n: u64) -> u64 {
 /// Compute a ⋅ 2^n
 pub(crate) fn shift(mut a: u64, n: u64) -> u64 {
     debug_assert!(a < MODULUS);
+    // OPT: Avoid div-rem
     let (q, r) = (n / 96, n % 96);
     if q & 1 == 1 {
         a = MODULUS - a;
@@ -217,30 +218,32 @@ mod test {
     }
 
     #[test]
-    fn test_omega() {
-        assert_eq!(omega(384), 18446742969919734017);
+    fn test_sqrt_two() {
+        // Verify that we take the positive square root of two
+        assert_eq!(omega(384), add(omega(8), pow(omega(8), 7)));
     }
 
     #[test]
     fn test_shift() {
-        for i in 0..384 {
-            assert_eq!(shift(1, i), pow(2, i));
-        }
+        proptest!(|(a: u64, s: u64)| {
+            prop_assume!(a < MODULUS);
+            assert_eq!(shift(a, s), mul(a, pow(2, s)));
+        });
     }
 
     #[test]
     fn test_omega_192() {
         let root = omega(192);
-        for i in 0_u64..192 {
-            assert_eq!(omega_384(1, i << 1), pow(root, i));
-        }
+        proptest!(|(a: u64, i in 0_u64..192)| {
+            assert_eq!(omega_384(a, 2 * i), mul(a, pow(root, i)));
+        });
     }
 
     #[test]
     fn test_omega_384() {
         let root = omega(384);
-        for i in 0_u64..384 {
-            assert_eq!(omega_384(1, i), pow(root, i));
-        }
+        proptest!(|(a: u64, i in 0_u64..384)| {
+            assert_eq!(omega_384(a, i), mul(a, pow(root, i)));
+        });
     }
 }
