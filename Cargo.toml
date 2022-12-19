@@ -1,9 +1,15 @@
 [package]
 name = "goldilocks-ntt"
+authors = ["Remco Bloemen <remco@wicked.ventures>"]
+homepage = "https://github.com/recmo/goldilocks-ntt"
+repository = "https://github.com/recmo/goldilocks-ntt"
+description = "A library for fast NTTs over the Goldilocks prime field"
+keywords = ["ntt", "goldilocks", "prime", "field"]
+categories = ["mathematics"]
+readme = "Readme.md"
+license = "MIT"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 serde = { version = "1.0.151", optional = true }

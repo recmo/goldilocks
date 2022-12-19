@@ -40,8 +40,8 @@ fn reduce_3(low: u64, mid: u32, high: u64) -> u64 {
         low2 = low2.wrapping_add(MODULUS);
     }
 
-    let mut product = ((mid as u64) << 32);
-    product -= (product >> 32);
+    let mut product = (mid as u64) << 32;
+    product -= product >> 32;
 
     let (mut result, carry) = product.overflowing_add(low2);
     if carry || result >= MODULUS {
