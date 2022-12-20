@@ -1,3 +1,6 @@
+//! Runs criterion benches from inside the library. Require the library to be
+//! compiled with the `bench` feature.
+
 use goldilocks_ntt as lib;
 
 fn main() {

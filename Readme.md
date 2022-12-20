@@ -1,6 +1,34 @@
 # Goldilocks-NTT
 
 
+## Build run test bench
+
+```sh
+cargo fmt &&\
+cargo clippy --all-features --all-targets &&\
+cargo test --workspace --all-features --doc -- --nocapture &&\
+cargo test --workspace --all-features --all-targets -- --nocapture &&\
+cargo doc --workspace --all-features --no-deps
+```
+
+Run Criterion benchmarks
+
+```sh
+cargo bench --bench criterion --features="bench"
+```
+
+Run NTT benchmarks
+
+```sh
+cargo bench --bench ntt
+```
+
+Check documentation coverage
+
+```sh
+RUSTDOCFLAGS="-Z unstable-options --show-coverage"  cargo doc --workspace --all-features --no-deps
+```
+
 ## See also
 
 * [plonky2]

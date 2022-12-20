@@ -10,7 +10,7 @@ use crate::Field;
 use rayon::{current_num_threads, prelude::*};
 #[cfg(feature = "rayon")]
 use std::cmp::max;
-use tracing::trace;
+use tracing::{trace, instrument};
 
 // Re-exports
 // TODO: Only re-export for bench
@@ -20,7 +20,6 @@ pub use memadvise::Advice;
 #[cfg(feature = "memadvise")]
 pub use prefetch::MemoryAdvise;
 pub use prefetch::{Prefetch, PrefetchIndex};
-#[cfg(feature = "std")]
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
 pub use transpose::transpose_square_stretch;
@@ -60,6 +59,7 @@ pub trait Fft {
 
 /// Blanket implementation of [`Fft`] for all slices of a [`FieldLike`]
 impl Fft for [Field] {
+    #[instrument(level = "trace", skip_all, fields(size = self.len()))]
     fn fft(&mut self) {
         let root = Field::root(self.len() as u64).expect("No root of unity for input length");
         self.fft_root(root);
@@ -90,7 +90,7 @@ impl Fft for [Field] {
     }
 
     #[cfg(feature = "rayon")]
-    fn clone_shifted(&mut self, source: &[Field], cofactor: &Field) {
+    fn clone_shifted(&mut self, source: &[Field], cofactor: Field) {
         // TODO: Write benchmark and tune chunk size
         const MIN_CHUNK_SIZE: usize = 1024;
         trace!("BEGIN Clone shifted");
@@ -99,9 +99,9 @@ impl Fft for [Field] {
             .par_chunks_mut(chunk_size)
             .zip(source.par_chunks(chunk_size));
         chunks.enumerate().for_each(|(i, (destination, source))| {
-            let mut c = cofactor.pow(i * chunk_size);
+            let mut c = cofactor.pow((i * chunk_size) as u64);
             for (destination, source) in destination.iter_mut().zip(source.iter()) {
-                *destination = source * &c;
+                *destination = *source * c;
                 c *= cofactor;
             }
         });
@@ -134,8 +134,7 @@ impl Fft for [Field] {
 
     fn fft_root(&mut self, root: Field) {
         const RADIX_SQRT_TRESHOLD: usize = 1 << 10;
-        if cfg!(feature = "std") && self.len() >= RADIX_SQRT_TRESHOLD {
-            #[cfg(feature = "std")]
+        if self.len() >= RADIX_SQRT_TRESHOLD {
             radix_sqrt(self, root);
         } else {
             let twiddles = get_twiddles(root, self.len());
