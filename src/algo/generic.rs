@@ -1,6 +1,10 @@
-/// ! Platform agnostic implementations.
-/// !
-/// ! Also serve as reference implementations for tests.
+//! Platform agnostic implementations.
+//!
+//! Also serve as reference implementations for tests.
+
+// We do a lot of intentional casting with truncation in this file.
+#![allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
+
 use core::mem::swap;
 
 /// p = φ² - φ + 1 = 2⁶⁴ - 2³² + 1
@@ -12,14 +16,8 @@ const GENERATOR: u64 = 2717;
 /// Order of the multiplicative group
 const ORDER: u64 = MODULUS - 1;
 
-/// φ = 2³²
-const PHI: u64 = 0x1_0000_0000;
-
-/// φ² mod p = 2⁶⁴ mod p = 2³² - 1
-const PHI2: u64 = 0xffff_ffff;
-
 /// Reduce a `u64`
-pub(crate) const fn reduce_64(mut n: u64) -> u64 {
+pub const fn reduce_64(mut n: u64) -> u64 {
     if n > MODULUS {
         n -= MODULUS;
     }
@@ -27,7 +25,7 @@ pub(crate) const fn reduce_64(mut n: u64) -> u64 {
 }
 
 /// Reduce a 128 bit number
-pub(crate) fn reduce_128(n: u128) -> u64 {
+pub fn reduce_128(n: u128) -> u64 {
     reduce_159(n as u64, (n >> 64) as u32, (n >> 96) as u64)
 }
 
@@ -54,7 +52,7 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
 /// Adds two field elements.
 ///
 /// Requires `a` and `b` to be reduced.
-pub(crate) const fn add(a: u64, b: u64) -> u64 {
+pub const fn add(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
     let (mut result, carry) = a.overflowing_add(b);
@@ -66,7 +64,7 @@ pub(crate) const fn add(a: u64, b: u64) -> u64 {
 }
 
 /// Multiplies two field elements.
-pub(crate) fn mul(a: u64, b: u64) -> u64 {
+pub fn mul(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
     reduce_128((a as u128) * (b as u128))
@@ -75,7 +73,7 @@ pub(crate) fn mul(a: u64, b: u64) -> u64 {
 // OPT: Dedicated `square` fn
 
 /// Compute a^e
-pub(crate) fn pow(mut a: u64, mut e: u64) -> u64 {
+pub fn pow(mut a: u64, mut e: u64) -> u64 {
     debug_assert!(a < MODULUS);
 
     let mut r = 1;
@@ -84,19 +82,19 @@ pub(crate) fn pow(mut a: u64, mut e: u64) -> u64 {
             r = mul(r, a);
         }
         a = mul(a, a);
-        e = e >> 1;
+        e >>= 1;
     }
     r
 }
 
 /// Compute the preferred n-th root of unity.
-pub(crate) fn omega(n: u64) -> u64 {
+pub fn omega(n: u64) -> u64 {
     assert_eq!(ORDER % n, 0);
     pow(GENERATOR, ORDER / n)
 }
 
 /// Compute a ⋅ 2^n
-pub(crate) fn shift(mut a: u64, n: u64) -> u64 {
+pub fn shift(mut a: u64, n: u64) -> u64 {
     debug_assert!(a < MODULUS);
     // OPT: Avoid div-rem
     let (q, r) = (n / 96, n % 96);
@@ -113,7 +111,7 @@ pub(crate) fn shift(mut a: u64, n: u64) -> u64 {
 }
 
 /// Compute a ⋅ ω₃₈₄ⁱ
-pub(crate) fn omega_384(a: u64, i: u64) -> u64 {
+pub fn omega_384(a: u64, i: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(i < 384);
 
@@ -128,7 +126,7 @@ pub(crate) fn omega_384(a: u64, i: u64) -> u64 {
 /// Modular inverse.
 ///
 /// Returns 0 for 0.
-pub(crate) fn inv(mut a: u64) -> u64 {
+pub fn inv(a: u64) -> u64 {
     debug_assert!(a < MODULUS);
     if a == 0 {
         return 0;
@@ -238,8 +236,7 @@ fn inv_addchain(a: u64) -> u64 {
     d = mul(d, c); // c^(2^31 + 1) = a^((2^31 - 1)(2^32 + 1))
     d = mul(d, d); // c^2(2^31 + 1) a^(2(2^31 - 1)(2^32 + 1))
     d = mul(d, a); // a^(2(2^32 - 2)(2^32 + 1) + 1)
-
-    return d;
+    d
 }
 
 #[cfg(test)]
@@ -369,10 +366,10 @@ mod test {
         proptest!(|(a: u64)| {
             prop_assume!(a < MODULUS);
             let b = inv(a);
-            if a != 0 {
-                assert_eq!(mul(a, b), 1);
-            } else {
+            if a == 0 {
                 assert_eq!(b, 0);
+            } else {
+                assert_eq!(mul(a, b), 1);
             }
         });
     }

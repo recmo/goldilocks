@@ -21,10 +21,6 @@ mod field;
 
 pub use field::Field;
 
-fn main() {
-    println!("Hello, world!");
-}
-
 #[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
