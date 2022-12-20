@@ -51,6 +51,18 @@ impl fmt::Display for Field {
     }
 }
 
+impl From<i32> for Field {
+    #[inline(always)]
+    fn from(value: i32) -> Self {
+        #[allow(clippy::cast_sign_loss)]
+        if value >= 0 {
+            Self(algo::reduce_64(value as u64))
+        } else {
+            Self(algo::reduce_64(Self::MODULUS - (-value as u64)))
+        }
+    }
+}
+
 impl From<u64> for Field {
     #[inline(always)]
     fn from(value: u64) -> Self {

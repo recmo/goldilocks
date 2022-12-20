@@ -13,7 +13,7 @@ edition = "2021"
 
 [features]
 default = []
-bench = ["dep:criterion", "dep:rand"]
+bench = ["dep:criterion", "rand"]
 
 [[bench]]
 name = "criterion"
