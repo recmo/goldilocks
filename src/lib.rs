@@ -24,3 +24,14 @@ pub use field::Field;
 fn main() {
     println!("Hello, world!");
 }
+
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::*;
+    use criterion::{Criterion};
+
+    pub fn group(criterion: &mut Criterion) {
+        algo::bench::group(criterion);
+    }
+}

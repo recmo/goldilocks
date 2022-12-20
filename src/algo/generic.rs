@@ -2,6 +2,8 @@
 /// !
 /// ! Also serve as reference implementations for tests.
 
+use core::mem::swap;
+
 /// p = φ² - φ + 1 = 2⁶⁴ - 2³² + 1
 const MODULUS: u64 = 0xffff_ffff_0000_0001;
 
@@ -29,6 +31,11 @@ pub(crate) const fn reduce_1(mut n: u64) -> u64 {
 fn reduce_2(low: u64, high: u64) -> u64 {
     let (mid, high) = (high as u32, high >> 32);
     reduce_3(low, mid, high)
+}
+
+/// Reduce a 128 bit number
+fn reduce_128(n: u128) -> u64 {
+    reduce_3(n as u64, (n >> 64) as u32, (n >> 96) as u64)
 }
 
 /// Reduce a 159 bit number
@@ -69,9 +76,7 @@ pub(crate) const fn add(a: u64, b: u64) -> u64 {
 pub(crate) fn mul(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
-    let r = (a as u128) * (b as u128);
-    let (low, high) = (r as u64, (r >> 64) as u64);
-    reduce_2(low, high)
+    reduce_128((a as u128) * (b as u128))
 }
 
 // OPT: Dedicated `square` fn
@@ -136,12 +141,12 @@ pub(crate) fn inv(a: u64) -> u64 {
     // OPT: Benchmark against GCD based methods.
 
     // Invert using Fermat's little theorem.
+    // Method from Adam P. Goucher <https://twitter.com/apgox>
     // This uses 72 multiplications, which is one less than the chain returned
     // by the BBBD algorithm in <https://github.com/str4d/addchain>.
-    // From Adam P. Goucher
     // a^-1 = a^(p-2) mod p
     // p - 2 = 2(2^31 - 1)(2^32 + 1) + 1
-    // 2^31 - 1 = 2(2^15 - 1)(2^15 + 1) + 1
+    // 2^31 - 1 = 2(2^15 - 1)(2^15 + 1) + 1  (optimal)
     // 2^15 - 1 has an addition chain in Archim Flammenkamp's database.
 
     // Compute b = a^(2^15 - 1) = a^32767 using an optimal addition chain.
@@ -168,6 +173,7 @@ pub(crate) fn inv(a: u64) -> u64 {
     // 19 multiplications (optimal)
 
     // Compute c = a^(2^31 - 1)
+    // 19 + 18 = 37 multiplications (optimal)
     let mut c = b;
     for _ in 0..15 {
         c = mul(c, c);
@@ -175,9 +181,9 @@ pub(crate) fn inv(a: u64) -> u64 {
     c = mul(c, b); // b^(2^15 + 1) = a^(2^30 - 1)
     c = mul(c, c); // b^(2^16 + 2) = a^(2^31 - 2)
     c = mul(c, a); // 2^31 - 1
-    // 19 + 18 = 37 multiplications (optimal)
 
     // Compute d = a^(p - 2)
+    // 37 + 35 = 72 multiplications
     let mut d = c;
     for _ in 0..32 {
         d = mul(d, d);
@@ -185,9 +191,91 @@ pub(crate) fn inv(a: u64) -> u64 {
     d = mul(d, c); // c^(2^31 + 1) = a^((2^31 - 1)(2^32 + 1))
     d = mul(d, d); // c^2(2^31 + 1) a^(2(2^31 - 1)(2^32 + 1))
     d = mul(d, a); // a^(2(2^32 - 2)(2^32 + 1) + 1)
-    // 37 + 35 = 72 multiplications
 
     return d;
+}
+
+/// Modular inverse using GCD
+pub(crate) fn inv2(a: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+
+    let mut t = 0_u64;
+    let mut newt = 1_u64;
+    let mut r = MODULUS;
+    let mut newr = a;
+
+    loop {
+        let q = r.checked_div(newr).unwrap_or(0);
+        t = t + (q * newt);
+        r = r - (q * newr);
+        if r == 0 {
+            return newt;
+        }
+        let q = newr.checked_div(r).unwrap_or(0);
+        newt = newt + (q * t);
+        newr = newr - (q * r);
+        if newr == 0 {
+            return MODULUS - t;
+        }
+    }
+}
+
+pub(crate) fn inv3(a: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+    pow(a, MODULUS - 2)
+}
+
+pub(crate) fn inv4(mut a: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+    if a == 0 {
+        return 0;
+    }
+
+    // Initial values for the half-extended GCD with MODULUS
+    let (mut u, mut v) = (MODULUS, a);
+    let (mut t0, mut t1) = (0_u64, 1_u64);
+
+    // Make sure `v` is odd
+    let mut twos = v.trailing_zeros();
+    v >>= twos;
+
+    // Initial negative sign, shifting left or right by 96 bits is the same
+    // as negating because 2^96 = -1 in Goldilocks.
+    twos += 96;
+
+    // Binary half-extended GCD
+    loop {
+        debug_assert!(u > v);
+        debug_assert_eq!(u & 1, 1);
+        debug_assert_eq!(v & 1, 1);
+        debug_assert_eq!(t1 * u + t0 * v , MODULUS);
+
+        u -= v;
+        t0 += t1;
+
+        let count = u.trailing_zeros();
+        u >>= count;
+        t1 <<= count;
+        twos += count;
+
+        if u < v {
+            swap(&mut u, &mut v);
+            swap(&mut t0, &mut t1);
+            // We need to flip the sign, which is the same as shifting right by 96
+            twos += 96;
+        }
+        if u == v {
+            break;
+        }
+    }
+
+    // Dividing by 2^shift is equivalent to multiplying by 2^(191 * shift)
+    // because 2 is a 192th primitive root.
+    twos *= 191;
+    t0 = shift(t0, twos as u64);
+    debug_assert!(t0 < MODULUS);
+    debug_assert_eq!(mul(t0, a), 1);
+    t0
 }
 
 #[cfg(test)]
@@ -288,6 +376,8 @@ mod test {
 
     #[test]
     fn test_shift() {
+        assert_eq!(shift(1, 192), 1);
+        assert_eq!(shift(1, 96), MODULUS - 1);
         proptest!(|(a: u64, s: u64)| {
             prop_assume!(a < MODULUS);
             assert_eq!(shift(a, s), mul(a, pow(2, s)));
@@ -320,6 +410,154 @@ mod test {
             } else {
                 assert_eq!(b, 0);
             }
+        });
+    }
+
+    #[test]
+    fn test_inv2() {
+        proptest!(|(a: u64)| {
+            prop_assume!(a < MODULUS);
+            let b = inv2(a);
+            if a != 0 {
+                assert_eq!(mul(a, b), 1);
+            } else {
+                assert_eq!(b, 0);
+            }
+        });
+    }
+
+    #[test]
+    fn test_inv3() {
+        proptest!(|(a: u64)| {
+            prop_assume!(a < MODULUS);
+            let b = inv3(a);
+            if a != 0 {
+                assert_eq!(mul(a, b), 1);
+            } else {
+                assert_eq!(b, 0);
+            }
+        });
+    }
+
+    #[test]
+    fn test_inv4() {
+        proptest!(|(a: u64)| {
+            prop_assume!(a < MODULUS);
+            let b = inv4(a);
+            if a != 0 {
+                assert_eq!(mul(a, b), 1);
+            } else {
+                assert_eq!(b, 0);
+            }
+        });
+    }
+}
+
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::*;
+    use core::hint::black_box;
+    use criterion::{BatchSize, Criterion};
+    use rand::{thread_rng, Rng};
+
+    pub fn group(criterion: &mut Criterion) {
+        bench_nop(criterion);
+        bench_reduce_128(criterion);
+        bench_add(criterion);
+        bench_mul(criterion);
+        bench_inv(criterion);
+        bench_inv2(criterion);
+        bench_inv3(criterion);
+        bench_inv4(criterion);
+    }
+
+    // Helper to get an idea of the benchmark overhead
+    fn bench_nop(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/nop", move |bencher| {
+            bencher.iter_batched(
+                || (rng.gen::<u64>() % MODULUS, rng.gen::<u64>() % MODULUS),
+                |(a, b)| black_box(a.wrapping_add(b)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_reduce_128(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/reduce_128", move |bencher| {
+            bencher.iter_batched(
+                || rng.gen(),
+                |a: u128| black_box(reduce_128(a)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_add(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/add", move |bencher| {
+            bencher.iter_batched(
+                || (rng.gen::<u64>() % MODULUS, rng.gen::<u64>() % MODULUS),
+                |(a, b)| black_box(add(a, b)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_mul(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/mul", move |bencher| {
+            bencher.iter_batched(
+                || (rng.gen::<u64>() % MODULUS, rng.gen::<u64>() % MODULUS),
+                |(a, b)| black_box(mul(a, b)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_inv(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/inv (Addition chain)", move |bencher| {
+            bencher.iter_batched(
+                || rng.gen::<u64>() % MODULUS,
+                |a| black_box(inv(a)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_inv2(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/inv (Euclidean)", move |bencher| {
+            bencher.iter_batched(
+                || rng.gen::<u64>() % MODULUS,
+                |a| black_box(inv2(a)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_inv3(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/inv (Pow)", move |bencher| {
+            bencher.iter_batched(
+                || rng.gen::<u64>() % MODULUS,
+                |a| black_box(inv3(a)),
+                BatchSize::SmallInput,
+            );
+        });
+    }
+
+    fn bench_inv4(criterion: &mut Criterion) {
+        let mut rng = thread_rng();
+        criterion.bench_function("field/inv (Binary)", move |bencher| {
+            bencher.iter_batched(
+                || rng.gen::<u64>() % MODULUS,
+                |a| black_box(inv4(a)),
+                BatchSize::SmallInput,
+            );
         });
     }
 }
