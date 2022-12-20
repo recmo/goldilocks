@@ -17,8 +17,8 @@
 
 mod algo;
 mod field;
+mod ntt;
 mod rand;
-// mod ntt;
 
 pub use field::Field;
 

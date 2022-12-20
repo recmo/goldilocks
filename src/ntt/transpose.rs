@@ -1,5 +1,5 @@
 use super::prefetch::PrefetchIndex;
-use log::trace;
+use tracing::trace;
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
 // TODO: Parallel transpose.

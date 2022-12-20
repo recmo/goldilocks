@@ -1,21 +1,18 @@
 use super::small::{radix_2, radix_2_twiddle};
-use crate::{FieldLike, RefFieldLike};
+use crate::Field;
 
 // TODO: Radix-4 recursion?
 
 /// Recursive vector-FFT.
 ///
 /// Computes several parallel FFTs
-pub fn fft_vec_recursive<Field>(
+pub fn fft_vec_recursive(
     values: &mut [Field],
     twiddles: &[Field],
     offset: usize,
     count: usize,
     stride: usize,
-) where
-    Field: FieldLike,
-    for<'a> &'a Field: RefFieldLike<Field>,
-{
+) {
     // Target loop size
     // Use smaller base case during tests to force better coverage of recursion.
     // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
@@ -47,7 +44,7 @@ pub fn fft_vec_recursive<Field>(
             .skip(1)
         {
             for i in offset..offset + count {
-                radix_2_twiddle(values, twiddle, i, stride)
+                radix_2_twiddle(values, *twiddle, i, stride)
             }
         }
     }
@@ -62,7 +59,6 @@ mod tests {
         },
         *,
     };
-    use crate::{FieldElement, Root};
     use proptest::prelude::*;
 
     proptest! {
@@ -71,8 +67,8 @@ mod tests {
         fn test_reference(values in arb_vec()) {
             let mut expected = values.clone();
             let mut result = values.clone();
-            let root = FieldElement::root(values.len()).unwrap();
-            let twiddles = get_twiddles(&root, values.len());
+            let root = Field::root(values.len() as u64).unwrap();
+            let twiddles = get_twiddles(root, values.len());
             ref_fft_permuted(&mut expected);
             fft_vec_recursive(&mut result, &twiddles, 0, 1, 1);
             prop_assert_eq!(result, expected);

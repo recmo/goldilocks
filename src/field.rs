@@ -31,11 +31,11 @@ impl Field {
 
     #[inline(always)]
     #[must_use]
-    pub fn omega(order: u64) -> Option<Self> {
+    pub fn root(order: u64) -> Option<Self> {
         if (Self::MODULUS - 1) % order != 0 {
             return None;
         }
-        Some(Self(algo::omega(order)))
+        Some(Self(algo::root(order)))
     }
 }
 
@@ -198,5 +198,24 @@ impl ops::ShrAssign<u64> for Field {
     #[inline(always)]
     fn shr_assign(&mut self, rhs: u64) {
         self.0 = algo::shift(self.0, 191 * (rhs % 192));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::{
+        arbitrary::Arbitrary,
+        num::u64,
+        strategy::{BoxedStrategy, Strategy},
+    };
+
+    impl Arbitrary for Field {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> BoxedStrategy<Self> {
+            u64::ANY.prop_map(Self::from).boxed()
+        }
     }
 }

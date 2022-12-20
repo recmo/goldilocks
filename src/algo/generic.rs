@@ -88,7 +88,7 @@ pub fn pow(mut a: u64, mut e: u64) -> u64 {
 }
 
 /// Compute the preferred n-th root of unity.
-pub fn omega(n: u64) -> u64 {
+pub fn root(n: u64) -> u64 {
     assert_eq!(ORDER % n, 0);
     pow(GENERATOR, ORDER / n)
 }
@@ -111,7 +111,7 @@ pub fn shift(mut a: u64, n: u64) -> u64 {
 }
 
 /// Compute a ⋅ ω₃₈₄ⁱ
-pub fn omega_384(a: u64, i: u64) -> u64 {
+pub fn root_384(a: u64, i: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(i < 384);
 
@@ -332,7 +332,7 @@ mod test {
     #[test]
     fn test_sqrt_two() {
         // Verify that we take the positive square root of two
-        assert_eq!(omega(384), add(omega(8), pow(omega(8), 7)));
+        assert_eq!(root(384), add(root(8), pow(root(8), 7)));
     }
 
     #[test]
@@ -346,18 +346,18 @@ mod test {
     }
 
     #[test]
-    fn test_omega_192() {
-        let root = omega(192);
+    fn test_root_192() {
+        let root = root(192);
         proptest!(|(a: u64, i in 0_u64..192)| {
-            assert_eq!(omega_384(a, 2 * i), mul(a, pow(root, i)));
+            assert_eq!(root_384(a, 2 * i), mul(a, pow(root, i)));
         });
     }
 
     #[test]
-    fn test_omega_384() {
-        let root = omega(384);
+    fn test_root_384() {
+        let root = root(384);
         proptest!(|(a: u64, i in 0_u64..384)| {
-            assert_eq!(omega_384(a, i), mul(a, pow(root, i)));
+            assert_eq!(root_384(a, i), mul(a, pow(root, i)));
         });
     }
 
@@ -450,10 +450,10 @@ pub mod bench {
 
     fn bench_omega(criterion: &mut Criterion) {
         let mut rng = thread_rng();
-        criterion.bench_function("field/omega_384", move |bencher| {
+        criterion.bench_function("field/root_384", move |bencher| {
             bencher.iter_batched(
                 || rng.gen::<u64>() % MODULUS,
-                |a| black_box(omega_384(a, 1)),
+                |a| black_box(root_384(a, 1)),
                 BatchSize::SmallInput,
             );
         });
