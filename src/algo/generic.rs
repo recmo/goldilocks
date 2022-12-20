@@ -1,7 +1,6 @@
 /// ! Platform agnostic implementations.
 /// !
 /// ! Also serve as reference implementations for tests.
-
 use core::mem::swap;
 
 /// p = φ² - φ + 1 = 2⁶⁴ - 2³² + 1
@@ -20,7 +19,7 @@ const PHI: u64 = 0x1_0000_0000;
 const PHI2: u64 = 0xffff_ffff;
 
 /// Reduce a `u64`
-pub(crate) const fn reduce_1(mut n: u64) -> u64 {
+pub(crate) const fn reduce_64(mut n: u64) -> u64 {
     if n > MODULUS {
         n -= MODULUS;
     }
@@ -28,19 +27,13 @@ pub(crate) const fn reduce_1(mut n: u64) -> u64 {
 }
 
 /// Reduce a 128 bit number
-fn reduce_2(low: u64, high: u64) -> u64 {
-    let (mid, high) = (high as u32, high >> 32);
-    reduce_3(low, mid, high)
-}
-
-/// Reduce a 128 bit number
-fn reduce_128(n: u128) -> u64 {
-    reduce_3(n as u64, (n >> 64) as u32, (n >> 96) as u64)
+pub(crate) fn reduce_128(n: u128) -> u64 {
+    reduce_159(n as u64, (n >> 64) as u32, (n >> 96) as u64)
 }
 
 /// Reduce a 159 bit number
 /// See <https://cp4space.hatsya.com/2021/09/01/an-efficient-prime-for-number-theoretic-transforms/>
-fn reduce_3(low: u64, mid: u32, high: u64) -> u64 {
+fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
     debug_assert!(high <= u64::MAX >> 1);
     let (mut low2, carry) = low.overflowing_sub(high);
     if carry {
@@ -112,9 +105,9 @@ pub(crate) fn shift(mut a: u64, n: u64) -> u64 {
     }
     match r {
         0 => a,
-        1..=32 => reduce_3(a << r, (a >> (64 - r)) as u32, 0),
-        33..=63 => reduce_3(a << r, (a >> (64 - r)) as u32, a >> (96 - r)),
-        64..=95 => reduce_3(0, (a << (r - 64)) as u32, a >> (96 - r)),
+        1..=32 => reduce_159(a << r, (a >> (64 - r)) as u32, 0),
+        33..=63 => reduce_159(a << r, (a >> (64 - r)) as u32, a >> (96 - r)),
+        64..=95 => reduce_159(0, (a << (r - 64)) as u32, a >> (96 - r)),
         96.. => unreachable!(),
     }
 }
@@ -135,7 +128,61 @@ pub(crate) fn omega_384(a: u64, i: u64) -> u64 {
 /// Modular inverse.
 ///
 /// Returns 0 for 0.
-pub(crate) fn inv(a: u64) -> u64 {
+pub(crate) fn inv(mut a: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+    if a == 0 {
+        return 0;
+    }
+
+    // Initial values for the half-extended GCD with MODULUS
+    let (mut u, mut v) = (MODULUS, a);
+    let (mut t0, mut t1) = (0_u64, 1_u64);
+
+    // Make sure `v` is odd
+    let mut twos = v.trailing_zeros();
+    v >>= twos;
+
+    // Initial negative sign, shifting left or right by 96 bits is the same
+    // as negating because 2^96 = -1 in Goldilocks.
+    twos += 96;
+
+    // Binary half-extended GCD
+    loop {
+        debug_assert!(u > v);
+        debug_assert_eq!(u & 1, 1);
+        debug_assert_eq!(v & 1, 1);
+        debug_assert_eq!(t1 * u + t0 * v, MODULUS);
+
+        u -= v;
+        t0 += t1;
+
+        let count = u.trailing_zeros();
+        u >>= count;
+        t1 <<= count;
+        twos += count;
+
+        if u < v {
+            swap(&mut u, &mut v);
+            swap(&mut t0, &mut t1);
+            // We need to flip the sign, which is the same as shifting right by 96
+            twos += 96;
+        }
+        if u == v {
+            break;
+        }
+    }
+
+    // Dividing by 2^shift is equivalent to multiplying by 2^(191 * shift)
+    // because 2 is a 192th primitive root.
+    twos *= 191;
+    t0 = shift(t0, twos as u64);
+    debug_assert!(t0 < MODULUS);
+    debug_assert_eq!(mul(t0, a), 1);
+    t0
+}
+
+#[allow(dead_code)]
+fn inv_addchain(a: u64) -> u64 {
     debug_assert!(a < MODULUS);
 
     // OPT: Benchmark against GCD based methods.
@@ -193,89 +240,6 @@ pub(crate) fn inv(a: u64) -> u64 {
     d = mul(d, a); // a^(2(2^32 - 2)(2^32 + 1) + 1)
 
     return d;
-}
-
-/// Modular inverse using GCD
-pub(crate) fn inv2(a: u64) -> u64 {
-    debug_assert!(a < MODULUS);
-
-    let mut t = 0_u64;
-    let mut newt = 1_u64;
-    let mut r = MODULUS;
-    let mut newr = a;
-
-    loop {
-        let q = r.checked_div(newr).unwrap_or(0);
-        t = t + (q * newt);
-        r = r - (q * newr);
-        if r == 0 {
-            return newt;
-        }
-        let q = newr.checked_div(r).unwrap_or(0);
-        newt = newt + (q * t);
-        newr = newr - (q * r);
-        if newr == 0 {
-            return MODULUS - t;
-        }
-    }
-}
-
-pub(crate) fn inv3(a: u64) -> u64 {
-    debug_assert!(a < MODULUS);
-    pow(a, MODULUS - 2)
-}
-
-pub(crate) fn inv4(mut a: u64) -> u64 {
-    debug_assert!(a < MODULUS);
-    if a == 0 {
-        return 0;
-    }
-
-    // Initial values for the half-extended GCD with MODULUS
-    let (mut u, mut v) = (MODULUS, a);
-    let (mut t0, mut t1) = (0_u64, 1_u64);
-
-    // Make sure `v` is odd
-    let mut twos = v.trailing_zeros();
-    v >>= twos;
-
-    // Initial negative sign, shifting left or right by 96 bits is the same
-    // as negating because 2^96 = -1 in Goldilocks.
-    twos += 96;
-
-    // Binary half-extended GCD
-    loop {
-        debug_assert!(u > v);
-        debug_assert_eq!(u & 1, 1);
-        debug_assert_eq!(v & 1, 1);
-        debug_assert_eq!(t1 * u + t0 * v , MODULUS);
-
-        u -= v;
-        t0 += t1;
-
-        let count = u.trailing_zeros();
-        u >>= count;
-        t1 <<= count;
-        twos += count;
-
-        if u < v {
-            swap(&mut u, &mut v);
-            swap(&mut t0, &mut t1);
-            // We need to flip the sign, which is the same as shifting right by 96
-            twos += 96;
-        }
-        if u == v {
-            break;
-        }
-    }
-
-    // Dividing by 2^shift is equivalent to multiplying by 2^(191 * shift)
-    // because 2 is a 192th primitive root.
-    twos *= 191;
-    t0 = shift(t0, twos as u64);
-    debug_assert!(t0 < MODULUS);
-    debug_assert_eq!(mul(t0, a), 1);
-    t0
 }
 
 #[cfg(test)]
@@ -412,45 +376,6 @@ mod test {
             }
         });
     }
-
-    #[test]
-    fn test_inv2() {
-        proptest!(|(a: u64)| {
-            prop_assume!(a < MODULUS);
-            let b = inv2(a);
-            if a != 0 {
-                assert_eq!(mul(a, b), 1);
-            } else {
-                assert_eq!(b, 0);
-            }
-        });
-    }
-
-    #[test]
-    fn test_inv3() {
-        proptest!(|(a: u64)| {
-            prop_assume!(a < MODULUS);
-            let b = inv3(a);
-            if a != 0 {
-                assert_eq!(mul(a, b), 1);
-            } else {
-                assert_eq!(b, 0);
-            }
-        });
-    }
-
-    #[test]
-    fn test_inv4() {
-        proptest!(|(a: u64)| {
-            prop_assume!(a < MODULUS);
-            let b = inv4(a);
-            if a != 0 {
-                assert_eq!(mul(a, b), 1);
-            } else {
-                assert_eq!(b, 0);
-            }
-        });
-    }
 }
 
 #[cfg(feature = "bench")]
@@ -467,9 +392,7 @@ pub mod bench {
         bench_add(criterion);
         bench_mul(criterion);
         bench_inv(criterion);
-        bench_inv2(criterion);
-        bench_inv3(criterion);
-        bench_inv4(criterion);
+        bench_omega(criterion);
     }
 
     // Helper to get an idea of the benchmark overhead
@@ -519,7 +442,7 @@ pub mod bench {
 
     fn bench_inv(criterion: &mut Criterion) {
         let mut rng = thread_rng();
-        criterion.bench_function("field/inv (Addition chain)", move |bencher| {
+        criterion.bench_function("field/inv", move |bencher| {
             bencher.iter_batched(
                 || rng.gen::<u64>() % MODULUS,
                 |a| black_box(inv(a)),
@@ -528,34 +451,12 @@ pub mod bench {
         });
     }
 
-    fn bench_inv2(criterion: &mut Criterion) {
+    fn bench_omega(criterion: &mut Criterion) {
         let mut rng = thread_rng();
-        criterion.bench_function("field/inv (Euclidean)", move |bencher| {
+        criterion.bench_function("field/omega_384", move |bencher| {
             bencher.iter_batched(
                 || rng.gen::<u64>() % MODULUS,
-                |a| black_box(inv2(a)),
-                BatchSize::SmallInput,
-            );
-        });
-    }
-
-    fn bench_inv3(criterion: &mut Criterion) {
-        let mut rng = thread_rng();
-        criterion.bench_function("field/inv (Pow)", move |bencher| {
-            bencher.iter_batched(
-                || rng.gen::<u64>() % MODULUS,
-                |a| black_box(inv3(a)),
-                BatchSize::SmallInput,
-            );
-        });
-    }
-
-    fn bench_inv4(criterion: &mut Criterion) {
-        let mut rng = thread_rng();
-        criterion.bench_function("field/inv (Binary)", move |bencher| {
-            bencher.iter_batched(
-                || rng.gen::<u64>() % MODULUS,
-                |a| black_box(inv4(a)),
+                |a| black_box(omega_384(a, 1)),
                 BatchSize::SmallInput,
             );
         });

@@ -4,6 +4,7 @@ use core::{iter, ops};
 /// An element in the Goldilocks field.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
 pub struct Field(u64);
 
 impl Field {
@@ -11,10 +12,34 @@ impl Field {
     const MAX: Field = Self(Self::MODULUS - 1);
 }
 
+impl Field {
+    pub fn inv(self) -> Self {
+        Self(algo::inv(self.0))
+    }
+
+    pub fn pow(self, exp: u64) -> Self {
+        Self(algo::pow(self.0, exp))
+    }
+}
+
+impl Default for Field {
+    #[inline(always)]
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
 impl From<u64> for Field {
     #[inline(always)]
     fn from(value: u64) -> Self {
-        Self(algo::reduce_1(value))
+        Self(algo::reduce_64(value))
+    }
+}
+
+impl From<u128> for Field {
+    #[inline(always)]
+    fn from(value: u128) -> Self {
+        Self(algo::reduce_128(value))
     }
 }
 

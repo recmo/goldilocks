@@ -29,7 +29,7 @@ fn main() {
 #[doc(hidden)]
 pub mod bench {
     use super::*;
-    use criterion::{Criterion};
+    use criterion::Criterion;
 
     pub fn group(criterion: &mut Criterion) {
         algo::bench::group(criterion);

@@ -1,9 +1,9 @@
 mod bit_reverse;
 mod prefetch;
+mod radix_sqrt;
 mod recursive;
 mod small;
 mod transpose;
-mod radix_sqrt;
 
 use crate::{Fft, FieldLike, Inv, Pow, RefFieldLike};
 use log::trace;
