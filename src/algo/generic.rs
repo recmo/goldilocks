@@ -127,6 +127,69 @@ pub(crate) fn omega_384(a: u64, i: u64) -> u64 {
     }
 }
 
+/// Modular inverse.
+///
+/// Returns 0 for 0.
+pub(crate) fn inv(a: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+
+    // OPT: Benchmark against GCD based methods.
+
+    // Invert using Fermat's little theorem.
+    // This uses 72 multiplications, which is one less than the chain returned
+    // by the BBBD algorithm in <https://github.com/str4d/addchain>.
+    // From Adam P. Goucher
+    // a^-1 = a^(p-2) mod p
+    // p - 2 = 2(2^31 - 1)(2^32 + 1) + 1
+    // 2^31 - 1 = 2(2^15 - 1)(2^15 + 1) + 1
+    // 2^15 - 1 has an addition chain in Archim Flammenkamp's database.
+
+    // Compute b = a^(2^15 - 1) = a^32767 using an optimal addition chain.
+    // See <http://wwwhomes.uni-bielefeld.de/achim/addition_chain.html>
+    let a2 = mul(a, a);
+    let a3 = mul(a2, a);
+    let a6 = mul(a3, a3);
+    let a7 = mul(a6, a);
+    let a14 = mul(a7, a7);
+    let a28 = mul(a14, a14);
+    let a56 = mul(a28, a28);
+    let a63 = mul(a56, a7);
+    let a126 = mul(a63, a63);
+    let a252 = mul(a126, a126);
+    let a504 = mul(a252, a252);
+    let a1008 = mul(a504, a504);
+    let a2016 = mul(a1008, a1008);
+    let a4032 = mul(a2016, a2016);
+    let a4095 = mul(a4032, a63);
+    let a8190 = mul(a4095, a4095);
+    let a16380 = mul(a8190, a8190);
+    let a32760 = mul(a16380, a16380);
+    let b = mul(a32760, a7);
+    // 19 multiplications (optimal)
+
+    // Compute c = a^(2^31 - 1)
+    let mut c = b;
+    for _ in 0..15 {
+        c = mul(c, c);
+    } // b^(2^15)
+    c = mul(c, b); // b^(2^15 + 1) = a^(2^30 - 1)
+    c = mul(c, c); // b^(2^16 + 2) = a^(2^31 - 2)
+    c = mul(c, a); // 2^31 - 1
+    // 19 + 18 = 37 multiplications (optimal)
+
+    // Compute d = a^(p - 2)
+    let mut d = c;
+    for _ in 0..32 {
+        d = mul(d, d);
+    }
+    d = mul(d, c); // c^(2^31 + 1) = a^((2^31 - 1)(2^32 + 1))
+    d = mul(d, d); // c^2(2^31 + 1) a^(2(2^31 - 1)(2^32 + 1))
+    d = mul(d, a); // a^(2(2^32 - 2)(2^32 + 1) + 1)
+    // 37 + 35 = 72 multiplications
+
+    return d;
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -244,6 +307,19 @@ mod test {
         let root = omega(384);
         proptest!(|(a: u64, i in 0_u64..384)| {
             assert_eq!(omega_384(a, i), mul(a, pow(root, i)));
+        });
+    }
+
+    #[test]
+    fn test_inv() {
+        proptest!(|(a: u64)| {
+            prop_assume!(a < MODULUS);
+            let b = inv(a);
+            if a != 0 {
+                assert_eq!(mul(a, b), 1);
+            } else {
+                assert_eq!(b, 0);
+            }
         });
     }
 }
