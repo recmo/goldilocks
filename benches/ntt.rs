@@ -16,8 +16,9 @@ fn sample_data(size: usize) -> Vec<Field> {
 
 fn main() {
     // Set up logging and tracing
-    let fmt_layer =
-        tracing_subscriber::fmt::layer().with_span_events(FmtSpan::ENTER | FmtSpan::EXIT).compact();
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
+        .compact();
     let (flame_layer, _guard) = FlameLayer::with_file("./tracing.folded").unwrap();
     let flame_layer = flame_layer.with_threads_collapsed(true);
     tracing_subscriber::registry()

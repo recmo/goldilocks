@@ -1,4 +1,5 @@
 // See <https://dougallj.github.io/applecpu/firestorm.html>
+// See <https://7-cpu.com/cpu/Apple_M1.html>
 
 pub(crate) fn inv4(mut a: u64) -> u64 {
     debug_assert!(a < MODULUS);

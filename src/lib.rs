@@ -7,7 +7,7 @@
     clippy::doc_markdown // Unfortunately many false positives on Latex.
 )]
 #![cfg_attr(
-    any(test, feature = "bench"),
+    any(test, feature = "criterion"),
     allow(clippy::wildcard_imports, clippy::cognitive_complexity)
 )]
 // See <https://stackoverflow.com/questions/61417452/how-to-get-a-feature-requirement-tag-in-the-documentation-generated-by-cargo-do>
@@ -22,7 +22,7 @@ mod rand;
 
 pub use field::Field;
 
-#[cfg(feature = "bench")]
+#[cfg(feature = "criterion")]
 #[doc(hidden)]
 pub mod bench {
     use super::*;
@@ -30,5 +30,6 @@ pub mod bench {
 
     pub fn group(criterion: &mut Criterion) {
         algo::bench::group(criterion);
+        ntt::bench::group(criterion);
     }
 }

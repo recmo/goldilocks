@@ -22,7 +22,7 @@ pub use prefetch::MemoryAdvise;
 pub use prefetch::{Prefetch, PrefetchIndex};
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
-pub use transpose::transpose_square_stretch;
+pub use self::transpose::transpose_square_stretch;
 
 /// Relevant papers:
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
@@ -254,4 +254,15 @@ mod tests {
             prop_assert_eq!(&result, truncated);
         }
     );
+}
+
+#[cfg(feature = "criterion")]
+#[doc(hidden)]
+pub mod bench {
+    use super::*;
+    use criterion::Criterion;
+
+    pub fn group(criterion: &mut Criterion) {
+        transpose::bench::group(criterion);
+    }
 }
