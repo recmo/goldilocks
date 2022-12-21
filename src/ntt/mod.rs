@@ -10,7 +10,7 @@ use crate::Field;
 use rayon::{current_num_threads, prelude::*};
 #[cfg(feature = "rayon")]
 use std::cmp::max;
-use tracing::{trace, instrument};
+use tracing::{instrument, trace};
 
 // Re-exports
 // TODO: Only re-export for bench
@@ -145,16 +145,15 @@ impl Fft for [Field] {
 }
 
 // TODO: Memoize
+#[instrument(skip(root))]
 pub fn get_twiddles(root: Field, size: usize) -> Vec<Field> {
     debug_assert!(size.is_power_of_two());
     debug_assert_eq!(root.pow(size as u64), Field::from(1));
-    trace!("BEGIN FFT Twiddles");
     trace!("Computing {} twiddles", size / 2);
     let mut twiddles = (0..size / 2)
         .map(|i| root.pow(i as u64))
         .collect::<Vec<_>>();
     permute(&mut twiddles);
-    trace!("END FFT Twiddles");
     twiddles
 }
 

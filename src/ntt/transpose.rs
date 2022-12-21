@@ -1,5 +1,5 @@
 use super::prefetch::PrefetchIndex;
-use tracing::trace;
+use tracing::{instrument, trace};
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
 // TODO: Parallel transpose.
@@ -9,6 +9,7 @@ use tracing::trace;
 /// The matrix is composed of `size` x `size` stretches of length `stretch`.
 ///
 /// `stretch` can only be `1` or `2`.
+#[instrument(skip(matrix))]
 pub fn transpose_square_stretch<T>(matrix: &mut [T], size: usize, stretch: usize) {
     trace!(
         "Transposing {} x {} square matrix of {} stretches",

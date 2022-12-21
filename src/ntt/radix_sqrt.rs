@@ -4,12 +4,13 @@ use super::{
 };
 use crate::Field;
 use rayon::prelude::*;
-use tracing::trace;
+use tracing::{instrument, trace};
 
 /// In-place FFT with permuted output.
 ///
 /// Implement's the six step FFT. Output is permuted, which avoids the last
 /// permutations step.
+#[instrument(skip(values, root), fields(size = values.len()))]
 pub fn radix_sqrt(values: &mut [Field], root: Field) {
     trace!("BEGIN FFT Radix SQRT");
     trace!("Radix FFT of size {}", values.len());

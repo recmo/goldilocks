@@ -1,6 +1,6 @@
 use super::small::{radix_2, radix_2_twiddle};
 use crate::Field;
-use tracing::instrument;
+use tracing::{instrument, span, Level};
 
 // TODO: Radix-4 recursion?
 
@@ -14,6 +14,14 @@ pub fn fft_vec_recursive(
     count: usize,
     stride: usize,
 ) {
+    // let span = if values.len() / stride >= 65536 {
+    //     let span = span!(Level::INFO, "FFT", size = values.len() / stride, count);
+    //     Some(span)
+    // } else {
+    //     None
+    // };
+    // let _guard = span.as_ref().map(|span| span.enter());
+
     // Target loop size
     // Use smaller base case during tests to force better coverage of recursion.
     // TODO: Make const when <https://github.com/rust-lang/rust/issues/49146> lands
