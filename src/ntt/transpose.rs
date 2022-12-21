@@ -1,12 +1,16 @@
 use super::prefetch::PrefetchIndex;
 use tracing::{instrument, trace};
 use rayon::prelude::*;
+use std::mem::size_of;
 
 // TODO: See https://github.com/ejmahler/transpose/blob/master/src/in_place.rs
 // TODO: See https://github.com/preiter93/transpose/blob/master/src/inplace.rs
+// See https://github.com/bluss/ndarray-extra/blob/master/src/transpose.rs
+// https://athemathmo.github.io/2016/08/29/inplace-transpose.html
 
 // https://link.springer.com/chapter/10.1007/978-3-642-55195-6_10
 // https://hal.inria.fr/hal-02960539/file/IEEE_TC_GodardLoechnerBastoul.pdf
+
 
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
@@ -55,12 +59,6 @@ fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
         for col in (row..size).step_by(2).skip(1) {
             let i = row * size + col;
             let j = col * size + row;
-            if PREFETCH_STRIDE > 0 && col + PREFETCH_STRIDE * 2 < size {
-                matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2);
-                matrix.prefetch_index_write(i + PREFETCH_STRIDE * 2 + size);
-                matrix.prefetch_index_write(j + PREFETCH_STRIDE * 2 * size);
-                matrix.prefetch_index_write(j + PREFETCH_STRIDE * 2 * size + size);
-            }
             matrix.swap(i, j);
             matrix.swap(i + 1, j + size);
             matrix.swap(i + size, j + 1);
@@ -88,6 +86,81 @@ fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
         }
     }
 }
+
+fn transpose_naive<T>(matrix: &mut [T], size: usize) {
+    for row in (0..size).step_by(2) {
+        let i = row * size + row;
+        unsafe {
+            matrix.swap_unchecked(i + 1, i + size);
+        }
+        for col in (row..size).step_by(2).skip(1) {
+            let i = row * size + col;
+            let j = col * size + row;
+            unsafe {
+                matrix.swap_unchecked(i, j);
+                matrix.swap_unchecked(i + 1, j + size);
+                matrix.swap_unchecked(i + size, j + 1);
+                matrix.swap_unchecked(i + size + 1, j + size + 1);
+            }
+        }
+    }
+    // for c in 0..size - 1 {
+    //     for r in c + 1..size {
+    //         let i = r * size + c;
+    //         let j = c * size + r;
+    //         matrix.swap(i, j);
+    //     }
+    // }
+}
+
+fn transpose_oblivious<T>(matrix: &mut [T], size: usize) {
+
+    // Base case algorithm for small blocks.
+    fn base<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
+        for row in 0..size {
+            for col in (row + 1)..size {
+                let i = (start_row + row) * stride + start_col + col;
+                let j = (start_row + col) * stride + start_col + row;
+                matrix.swap(i, j);
+            }
+        }
+    }
+
+    // Recurse on
+    //
+    // [ A B ] T   [ Aᵀ Cᵀ ]
+    // [ C D ]  =  [ Bᵀ Dᵀ ]
+    fn recurse<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
+        // Stop recursion when we hit approximate L1 cache size.
+        let l1_cache_size = 1_usize << 17; // 128 KB
+        let l1_block_size = l1_cache_size / size_of::<T>();
+        if size <= l1_block_size {
+            base(matrix, stride, start_row, start_col, size);
+            return;
+        }
+
+        // Recurse on A, D, B, C. (B C last so they are hot when we swap)
+        // TODO: Parallel recursion
+        let half = size / 2;
+        recurse(matrix, stride, start_row, start_col, half);
+        recurse(matrix, stride, start_row + half, start_col + half, half);
+        recurse(matrix, stride, start_row, start_col + half, half);
+        recurse(matrix, stride, start_row + half, start_col, half);
+
+        // Swap Bᵀ and Cᵀ
+        // TODO: Parallelize
+        for row in 0..half {
+            for col in 0..half {
+                let i = (start_row + row) * stride + start_col + half + col;
+                let j = (start_row + half + row) * stride + start_col + col;
+                matrix.swap(i, j);
+            }
+        }
+    }
+
+    recurse(matrix, size, 0, 0, size);
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -154,6 +227,8 @@ pub mod bench {
     use criterion::Criterion;
 
     pub fn group(criterion: &mut Criterion) {
+        bench_transpose_naive(criterion);  
+        bench_transpose_oblivious(criterion);
         bench_transpose_square_1(criterion);
         bench_lib_transpose_inplace(criterion);
         bench_lib_transpose(criterion);
@@ -167,6 +242,20 @@ pub mod bench {
         result
     }
 
+    pub fn bench_transpose_naive(c: &mut Criterion) {
+        let mut group = c.benchmark_group("transpose_naive");
+        group.sample_size(10);
+
+        for i in 10..=16 {
+            let size = 1_usize << i;
+            group.bench_function(format!("{size}x{size}"), |b| {
+                let mut matrix = rand_vec(size * size);
+                b.iter(|| transpose_naive(&mut matrix, size))
+            });
+        }
+        group.finish();
+    }
+
     pub fn bench_transpose_square_1(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose_square_1");
         group.sample_size(10);
@@ -176,6 +265,21 @@ pub mod bench {
             group.bench_function(format!("{size}x{size}"), |b| {
                 let mut matrix = rand_vec(size * size);
                 b.iter(|| transpose_square_1(&mut matrix, size))
+            });
+        }
+        group.finish();
+    }
+
+
+    pub fn bench_transpose_oblivious(c: &mut Criterion) {
+        let mut group = c.benchmark_group("transpose_oblivious");
+        group.sample_size(10);
+
+        for i in 10..=16 {
+            let size = 1_usize << i;
+            group.bench_function(format!("{size}x{size}"), |b| {
+                let mut matrix = rand_vec(size * size);
+                b.iter(|| transpose_oblivious(&mut matrix, size))
             });
         }
         group.finish();
