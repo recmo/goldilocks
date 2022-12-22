@@ -14,6 +14,7 @@ use tracing::{instrument, trace};
 
 // Re-exports
 // TODO: Only re-export for bench
+pub use self::transpose::transpose_square_stretch;
 pub use bit_reverse::{permute, permute_index};
 #[cfg(feature = "memadvise")]
 pub use memadvise::Advice;
@@ -22,7 +23,6 @@ pub use prefetch::MemoryAdvise;
 pub use prefetch::{Prefetch, PrefetchIndex};
 pub use radix_sqrt::radix_sqrt;
 pub use recursive::fft_vec_recursive;
-pub use self::transpose::transpose_square_stretch;
 
 /// Relevant papers:
 /// * D. H. Bailey (1990). FFTs in external or hierarchical memory. <https://www.davidhbailey.com/dhbpapers/fftq.pdf>

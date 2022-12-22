@@ -1,7 +1,7 @@
 use super::prefetch::PrefetchIndex;
-use tracing::{instrument, trace};
 use rayon::prelude::*;
 use std::mem::size_of;
+use tracing::{instrument, trace};
 
 // TODO: See https://github.com/ejmahler/transpose/blob/master/src/in_place.rs
 // TODO: See https://github.com/preiter93/transpose/blob/master/src/inplace.rs
@@ -10,8 +10,6 @@ use std::mem::size_of;
 
 // https://link.springer.com/chapter/10.1007/978-3-642-55195-6_10
 // https://hal.inria.fr/hal-02960539/file/IEEE_TC_GodardLoechnerBastoul.pdf
-
-
 
 // TODO: Outer cache-oblivious layer for mmap-backed.
 // TODO: Parallel transpose.
@@ -113,54 +111,65 @@ fn transpose_naive<T>(matrix: &mut [T], size: usize) {
     // }
 }
 
-fn transpose_oblivious<T>(matrix: &mut [T], size: usize) {
+fn transpose_oblivious<T: core::fmt::Debug>(matrix: &mut [T], size: usize) {
+    // Stop recursion when we hit approximate L1 cache size.
+    let l1_cache_size = 1_usize << 17; // 128 KB
+    let l1_block_size = l1_cache_size / size_of::<T>();
 
-    // Base case algorithm for small blocks.
-    fn base<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
-        for row in 0..size {
-            for col in (row + 1)..size {
-                let i = (start_row + row) * stride + start_col + col;
-                let j = (start_row + col) * stride + start_col + row;
-                matrix.swap(i, j);
-            }
-        }
-    }
-
-    // Recurse on
-    //
-    // [ A B ] T   [ Aᵀ Cᵀ ]
-    // [ C D ]  =  [ Bᵀ Dᵀ ]
-    fn recurse<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
-        // Stop recursion when we hit approximate L1 cache size.
-        let l1_cache_size = 1_usize << 17; // 128 KB
-        let l1_block_size = l1_cache_size / size_of::<T>();
-        if size <= l1_block_size {
-            base(matrix, stride, start_row, start_col, size);
-            return;
-        }
-
-        // Recurse on A, D, B, C. (B C last so they are hot when we swap)
-        // TODO: Parallel recursion
-        let half = size / 2;
-        recurse(matrix, stride, start_row, start_col, half);
-        recurse(matrix, stride, start_row + half, start_col + half, half);
-        recurse(matrix, stride, start_row, start_col + half, half);
-        recurse(matrix, stride, start_row + half, start_col, half);
-
-        // Swap Bᵀ and Cᵀ
-        // TODO: Parallelize
-        for row in 0..half {
-            for col in 0..half {
-                let i = (start_row + row) * stride + start_col + half + col;
-                let j = (start_row + half + row) * stride + start_col + col;
-                matrix.swap(i, j);
-            }
-        }
-    }
-
-    recurse(matrix, size, 0, 0, size);
+    recurse(matrix, size, 0, 0, size, l1_block_size);
 }
 
+// Base case algorithm for small blocks.
+//
+// A → Aᵀ
+fn base<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
+    // Loop over upper-right triangle.
+    for row in 0..size {
+        for col in (row + 1)..size {
+            let i = (start_row + row) * stride + start_col + col;
+            let j = (start_row + col) * stride + start_col + row;
+            matrix.swap(i, j);
+        }
+    }
+}
+
+// Swap two blocks of the matrix.
+//
+// [ A B ]    [ A C ]
+// [ C D ]  → [ B D ]
+fn swap<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
+    let half = size / 2;
+    for row in 0..half {
+        for col in half..size {
+            let i = (start_row + row) * stride + start_col + col;
+            let j = (start_row + row + half) * stride + start_col + col - half;
+            matrix.swap(i, j);
+        }
+    }
+}
+
+// Recurse on 2x2 blocks.
+//
+// [ A B ] T   [ Aᵀ Cᵀ ]
+// [ C D ]  =  [ Bᵀ Dᵀ ]
+fn recurse<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize, base_size: usize) {
+    if size * size <= base_size {
+        base(matrix, stride, start_row, start_col, size);
+        return;
+    }
+
+    // Recurse on A, D, B, C.
+    // B C last so they are hot when we swap.
+    // OPT: Parallel recursion
+    let half = size / 2;
+    recurse(matrix, stride, start_row, start_col, half, base_size);
+    recurse(matrix, stride, start_row + half, start_col + half, half, base_size);
+    recurse(matrix, stride, start_row, start_col + half, half, base_size);
+    recurse(matrix, stride, start_row + half, start_col, half, base_size);
+
+    // Swap Bᵀ and Cᵀ
+    swap(matrix, stride, start_row, start_col, size);
+}
 
 #[cfg(test)]
 mod tests {
@@ -206,6 +215,52 @@ mod tests {
         });
     }
 
+    #[rustfmt::skip]
+    #[test]
+    fn test_base() {
+        let mut matrix = vec![
+             0,  1,  2,  3,
+             4,  5,  6,  7,
+             8,  9, 10, 11,
+            12, 13, 14, 15,
+        ];
+        base(&mut matrix, 4, 0, 2, 2);
+        assert_eq!(matrix, &[
+             0,  1,  2,  6,
+             4,  5,  3,  7,
+             8,  9, 10, 11,
+            12, 13, 14, 15,
+        ]);
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn test_swap() {
+        let mut matrix = vec![
+             0,  1,  2,  3,
+             4,  5,  6,  7,
+             8,  9, 10, 11,
+            12, 13, 14, 15,
+        ];
+        swap(&mut matrix, 4, 0, 0, 4);
+        assert_eq!(matrix, &[
+             0,  1,  8,  9,
+             4,  5, 12, 13,
+             2,  3, 10, 11,
+             6,  7, 14, 15,
+        ]);
+    }
+
+    /// Transpose matches reference
+    #[test]
+    fn test_recurse() {
+        let size = 256;
+        let mut matrix = (0..size * size).map(|i| i as u32).collect::<Vec<_>>();
+        let expected = reference(&matrix, size, 1);
+        recurse(&mut matrix, size, 0, 0, size, 16);
+        assert_eq!(matrix, expected);
+    }
+
     /// Transpose matches reference
     #[test]
     fn compare_reference() {
@@ -223,11 +278,11 @@ mod tests {
 pub mod bench {
     use super::*;
     use crate::Field;
-    use rayon::prelude::*;
     use criterion::Criterion;
+    use rayon::prelude::*;
 
     pub fn group(criterion: &mut Criterion) {
-        bench_transpose_naive(criterion);  
+        bench_transpose_naive(criterion);
         bench_transpose_oblivious(criterion);
         bench_transpose_square_1(criterion);
         bench_lib_transpose_inplace(criterion);
@@ -269,7 +324,6 @@ pub mod bench {
         }
         group.finish();
     }
-
 
     pub fn bench_transpose_oblivious(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose_oblivious");
