@@ -245,6 +245,10 @@ pub mod bench {
     use rayon::prelude::*;
 
     pub fn group(criterion: &mut Criterion) {
+        bench_read(criterion);
+        bench_write(criterion);
+        bench_update(criterion);
+
         bench_recurse(criterion);
         bench_tiled(criterion);
         bench_transpose_naive(criterion);
@@ -271,6 +275,71 @@ pub mod bench {
                 b.iter_batched_ref(
                     || rand_vec(size * size),
                     |m| recurse(m.as_mut_slice(), size, size),
+                    BatchSize::LargeInput,
+                )
+            });
+        }
+        group.finish();
+    }
+
+    pub fn bench_read(c: &mut Criterion) {
+        let mut group = c.benchmark_group("mem/read");
+        for i in 5..=16 {
+            let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
+            group.bench_function(format!("{size}x{size}"), |b| {
+                b.iter_batched_ref(
+                    || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
+                    |m|{
+                        let mut sum = 0_u64;
+                        for a in m.iter() {
+                           sum = sum.wrapping_add(*a);
+                        }
+                        sum
+                    },
+                    BatchSize::LargeInput,
+                )
+            });
+        }
+        group.finish();
+    }
+
+    pub fn bench_write(c: &mut Criterion) {
+        let mut group = c.benchmark_group("mem/write");
+        for i in 5..=16 {
+            let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
+            group.bench_function(format!("{size}x{size}"), |b| {
+                b.iter_batched_ref(
+                    || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
+                    |m|{
+                        for a in m.iter_mut() {
+                            *a = 1337;
+                        }
+                    },
+                    BatchSize::LargeInput,
+                )
+            });
+        }
+        group.finish();
+    }
+
+    pub fn bench_update(c: &mut Criterion) {
+        let mut group = c.benchmark_group("mem/update");
+        for i in 5..=16 {
+            let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
+            group.bench_function(format!("{size}x{size}"), |b| {
+                b.iter_batched_ref(
+                    || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
+                    |m|{
+                        for a in m.iter_mut() {
+                            *a = a.wrapping_add(1337);
+                        }
+                    },
                     BatchSize::LargeInput,
                 )
             });
