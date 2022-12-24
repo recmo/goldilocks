@@ -36,6 +36,10 @@ tracing-flame = "0.2.0"
 
 transpose1 = { package = "transpose", version = "0.2.2" }
 transpose2 = { package = "transpose", git = "https://github.com/preiter93/transpose" }
+plonky2_field = { git = "https://github.com/mir-protocol/plonky2", optional = true }
 
 [dev-dependencies]
 proptest = "1.0.0"
+
+[profile.release]
+debug = true

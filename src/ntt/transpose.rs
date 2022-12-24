@@ -267,7 +267,8 @@ pub mod bench {
 
     pub fn bench_recurse(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose/recurse");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
@@ -284,17 +285,18 @@ pub mod bench {
 
     pub fn bench_read(c: &mut Criterion) {
         let mut group = c.benchmark_group("mem/read");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
                 b.iter_batched_ref(
                     || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
-                    |m|{
+                    |m| {
                         let mut sum = 0_u64;
                         for a in m.iter() {
-                           sum = sum.wrapping_add(*a);
+                            sum = sum.wrapping_add(*a);
                         }
                         sum
                     },
@@ -307,14 +309,15 @@ pub mod bench {
 
     pub fn bench_write(c: &mut Criterion) {
         let mut group = c.benchmark_group("mem/write");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
                 b.iter_batched_ref(
                     || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
-                    |m|{
+                    |m| {
                         for a in m.iter_mut() {
                             *a = 1337;
                         }
@@ -328,14 +331,15 @@ pub mod bench {
 
     pub fn bench_update(c: &mut Criterion) {
         let mut group = c.benchmark_group("mem/update");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
                 b.iter_batched_ref(
                     || unsafe { transmute::<_, Vec<u64>>(rand_vec(size * size)) },
-                    |m|{
+                    |m| {
                         for a in m.iter_mut() {
                             *a = a.wrapping_add(1337);
                         }
@@ -349,7 +353,8 @@ pub mod bench {
 
     pub fn bench_tiled(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose/tiled");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
@@ -366,7 +371,8 @@ pub mod bench {
 
     pub fn bench_transpose_naive(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose/naive");
-        for i in 5..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 5..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
@@ -383,7 +389,8 @@ pub mod bench {
 
     pub fn bench_transpose_square_1(c: &mut Criterion) {
         let mut group = c.benchmark_group("transpose/square_1");
-        for i in 10..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 10..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
@@ -401,7 +408,8 @@ pub mod bench {
     pub fn bench_lib_transpose_inplace(c: &mut Criterion) {
         use ::transpose1::transpose_inplace;
         let mut group = c.benchmark_group("transpose/lib1_ip");
-        for i in 10..=14 {
+        let max = if cfg!(test) { 5 } else { 14 };
+        for i in 10..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
@@ -420,7 +428,8 @@ pub mod bench {
     pub fn bench_lib_transpose(c: &mut Criterion) {
         use ::transpose1::transpose;
         let mut group = c.benchmark_group("transpose/lib1_oop");
-        for i in 10..=16 {
+        let max = if cfg!(test) { 5 } else { 16 };
+        for i in 10..=max {
             let size = 1_usize << i;
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });

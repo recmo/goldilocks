@@ -15,6 +15,7 @@
 // Nightly only feature flag to enable the `unlikely` compiler hint.
 #![cfg_attr(has_core_intrinsics, feature(core_intrinsics))]
 #![feature(slice_swap_unchecked)]
+#![feature(core_intrinsics)]
 
 mod algo;
 mod field;
