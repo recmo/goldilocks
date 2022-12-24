@@ -111,64 +111,61 @@ fn transpose_naive<T>(matrix: &mut [T], size: usize) {
     // }
 }
 
-fn transpose_oblivious<T: core::fmt::Debug>(matrix: &mut [T], size: usize) {
-    // Stop recursion when we hit approximate L1 cache size.
-    let l1_cache_size = 1_usize << 17; // 128 KB
-    let l1_block_size = l1_cache_size / size_of::<T>();
-
-    recurse(matrix, size, 0, 0, size, l1_block_size);
-}
-
-// Base case algorithm for small blocks.
-//
-// A → Aᵀ
-fn base<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
-    // Loop over upper-right triangle.
-    for row in 0..size {
-        for col in (row + 1)..size {
-            let i = (start_row + row) * stride + start_col + col;
-            let j = (start_row + col) * stride + start_col + row;
-            matrix.swap(i, j);
+/// Recurse on 2x2 blocks.
+///
+/// [ A B ] T   [ Aᵀ Cᵀ ]
+/// [ C D ]  =  [ Bᵀ Dᵀ ]
+///
+/// <https://en.algorithmica.org/hpc/external-memory/oblivious/#matrix-transposition>
+fn recurse<T>(a: &mut [T], n: usize, N: usize) {
+    if n <= 32 {
+        // Base case
+        for i in 0..n {
+            for j in 0..i {
+                unsafe {
+                    a.swap_unchecked(i * N + j, j * N + i);
+                }
+            }
         }
-    }
-}
+    } else {
+        let k = n / 2;
+        recurse(a, k, N);
+        recurse(&mut a[k..], k, N);
+        recurse(&mut a[k * N..], k, N);
+        recurse(&mut a[k * N + k..], k, N);
 
-// Swap two blocks of the matrix.
-//
-// [ A B ]    [ A C ]
-// [ C D ]  → [ B D ]
-fn swap<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize) {
-    let half = size / 2;
-    for row in 0..half {
-        for col in half..size {
-            let i = (start_row + row) * stride + start_col + col;
-            let j = (start_row + row + half) * stride + start_col + col - half;
-            matrix.swap(i, j);
+        for i in 0..k {
+            for j in 0..k {
+                unsafe {
+                    a.swap_unchecked((i + k) * N + j, i * N + (j + k));
+                }
+            }
         }
+
+        // TODO: Handle odd n
     }
 }
 
-// Recurse on 2x2 blocks.
-//
-// [ A B ] T   [ Aᵀ Cᵀ ]
-// [ C D ]  =  [ Bᵀ Dᵀ ]
-fn recurse<T>(matrix: &mut [T], stride: usize, start_row: usize, start_col: usize, size: usize, base_size: usize) {
-    if size * size <= base_size {
-        base(matrix, stride, start_row, start_col, size);
-        return;
-    }
+pub fn tiled<T: Sync>(a: &mut [T], n: usize) {
+    use std::cmp::min;
+    const TILE_SIZE: usize = 32;
 
-    // Recurse on A, D, B, C.
-    // B C last so they are hot when we swap.
-    // OPT: Parallel recursion
-    let half = size / 2;
-    recurse(matrix, stride, start_row, start_col, half, base_size);
-    recurse(matrix, stride, start_row + half, start_col + half, half, base_size);
-    recurse(matrix, stride, start_row, start_col + half, half, base_size);
-    recurse(matrix, stride, start_row + half, start_col, half, base_size);
+    let a = a.as_ptr() as u64;
 
-    // Swap Bᵀ and Cᵀ
-    swap(matrix, stride, start_row, start_col, size);
+    (0..n).into_par_iter().step_by(TILE_SIZE).for_each(|i| {
+        for j in (i..n).step_by(TILE_SIZE) {
+            for ii in i..min(i + TILE_SIZE, n) {
+                for jj in j..min(j + TILE_SIZE, n) {
+                    unsafe {
+                        let a = a as *mut T;
+                        let src = a.offset((ii * n + jj) as isize);
+                        let dst = a.offset((jj * n + ii) as isize);
+                        std::ptr::swap(src, dst);
+                    }
+                }
+            }
+        }
+    })
 }
 
 #[cfg(test)]
@@ -215,49 +212,13 @@ mod tests {
         });
     }
 
-    #[rustfmt::skip]
-    #[test]
-    fn test_base() {
-        let mut matrix = vec![
-             0,  1,  2,  3,
-             4,  5,  6,  7,
-             8,  9, 10, 11,
-            12, 13, 14, 15,
-        ];
-        base(&mut matrix, 4, 0, 2, 2);
-        assert_eq!(matrix, &[
-             0,  1,  2,  6,
-             4,  5,  3,  7,
-             8,  9, 10, 11,
-            12, 13, 14, 15,
-        ]);
-    }
-
-    #[rustfmt::skip]
-    #[test]
-    fn test_swap() {
-        let mut matrix = vec![
-             0,  1,  2,  3,
-             4,  5,  6,  7,
-             8,  9, 10, 11,
-            12, 13, 14, 15,
-        ];
-        swap(&mut matrix, 4, 0, 0, 4);
-        assert_eq!(matrix, &[
-             0,  1,  8,  9,
-             4,  5, 12, 13,
-             2,  3, 10, 11,
-             6,  7, 14, 15,
-        ]);
-    }
-
     /// Transpose matches reference
     #[test]
     fn test_recurse() {
         let size = 256;
         let mut matrix = (0..size * size).map(|i| i as u32).collect::<Vec<_>>();
         let expected = reference(&matrix, size, 1);
-        recurse(&mut matrix, size, 0, 0, size, 16);
+        recurse(&mut matrix, size, size);
         assert_eq!(matrix, expected);
     }
 
@@ -276,14 +237,17 @@ mod tests {
 #[cfg(feature = "criterion")]
 #[doc(hidden)]
 pub mod bench {
+    use std::mem::transmute;
+
     use super::*;
     use crate::Field;
-    use criterion::Criterion;
+    use criterion::{BatchSize, Criterion, Throughput};
     use rayon::prelude::*;
 
     pub fn group(criterion: &mut Criterion) {
+        bench_recurse(criterion);
+        bench_tiled(criterion);
         bench_transpose_naive(criterion);
-        bench_transpose_oblivious(criterion);
         bench_transpose_square_1(criterion);
         bench_lib_transpose_inplace(criterion);
         bench_lib_transpose(criterion);
@@ -297,43 +261,69 @@ pub mod bench {
         result
     }
 
-    pub fn bench_transpose_naive(c: &mut Criterion) {
-        let mut group = c.benchmark_group("transpose_naive");
-        group.sample_size(10);
-
-        for i in 10..=16 {
+    pub fn bench_recurse(c: &mut Criterion) {
+        let mut group = c.benchmark_group("transpose/recurse");
+        for i in 5..=16 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
-                b.iter(|| transpose_naive(&mut matrix, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| recurse(m.as_mut_slice(), size, size),
+                    BatchSize::LargeInput,
+                )
+            });
+        }
+        group.finish();
+    }
+
+    pub fn bench_tiled(c: &mut Criterion) {
+        let mut group = c.benchmark_group("transpose/tiled");
+        for i in 5..=16 {
+            let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
+            group.bench_function(format!("{size}x{size}"), |b| {
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| tiled(m.as_mut_slice(), size),
+                    BatchSize::LargeInput,
+                )
+            });
+        }
+        group.finish();
+    }
+
+    pub fn bench_transpose_naive(c: &mut Criterion) {
+        let mut group = c.benchmark_group("transpose/naive");
+        for i in 5..=16 {
+            let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
+            group.bench_function(format!("{size}x{size}"), |b| {
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| transpose_naive(m.as_mut_slice(), size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
     }
 
     pub fn bench_transpose_square_1(c: &mut Criterion) {
-        let mut group = c.benchmark_group("transpose_square_1");
-        group.sample_size(10);
-
+        let mut group = c.benchmark_group("transpose/square_1");
         for i in 10..=16 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
-                b.iter(|| transpose_square_1(&mut matrix, size))
-            });
-        }
-        group.finish();
-    }
-
-    pub fn bench_transpose_oblivious(c: &mut Criterion) {
-        let mut group = c.benchmark_group("transpose_oblivious");
-        group.sample_size(10);
-
-        for i in 10..=16 {
-            let size = 1_usize << i;
-            group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
-                b.iter(|| transpose_oblivious(&mut matrix, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| transpose_square_1(m.as_mut_slice(), size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
@@ -341,15 +331,18 @@ pub mod bench {
 
     pub fn bench_lib_transpose_inplace(c: &mut Criterion) {
         use ::transpose1::transpose_inplace;
-        let mut group = c.benchmark_group("transpose1_ip");
-        group.sample_size(10);
-
+        let mut group = c.benchmark_group("transpose/lib1_ip");
         for i in 10..=14 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
                 let mut scratch = vec![Field::from(0); size];
-                b.iter(|| transpose_inplace(&mut matrix, &mut scratch, size, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| transpose_inplace(m.as_mut_slice(), &mut scratch, size, size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
@@ -357,15 +350,18 @@ pub mod bench {
 
     pub fn bench_lib_transpose(c: &mut Criterion) {
         use ::transpose1::transpose;
-        let mut group = c.benchmark_group("transpose1_oop");
-        group.sample_size(10);
-
-        for i in 10..=15 {
+        let mut group = c.benchmark_group("transpose/lib1_oop");
+        for i in 10..=16 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
                 let mut out = vec![Field::from(0); size * size];
-                b.iter(|| transpose(&matrix, &mut out, size, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| transpose(m.as_slice(), &mut out, size, size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
@@ -373,15 +369,18 @@ pub mod bench {
 
     pub fn bench_lib_transpose2(c: &mut Criterion) {
         use ::transpose2::ip_transpose;
-        let mut group = c.benchmark_group("transpose2_ip");
-        group.sample_size(10);
-
+        let mut group = c.benchmark_group("transpose/lib2_ip");
         for i in 10..=16 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
                 let mut scratch = vec![Field::from(0); size];
-                b.iter(|| ip_transpose(&mut matrix, &mut scratch, size, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| ip_transpose(m.as_mut_slice(), &mut scratch, size, size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
@@ -389,15 +388,18 @@ pub mod bench {
 
     pub fn bench_lib_transpose2_oop(c: &mut Criterion) {
         use ::transpose2::oop_transpose;
-        let mut group = c.benchmark_group("transpose2_oop");
-        group.sample_size(10);
-
+        let mut group = c.benchmark_group("transpose/lib2_oop");
         for i in 10..=16 {
             let size = 1_usize << i;
+            group.throughput(Throughput::Elements((size * size) as u64));
+            group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
-                let mut matrix = rand_vec(size * size);
                 let mut out = vec![Field::from(0); size * size];
-                b.iter(|| oop_transpose(&matrix, &mut out, size, size))
+                b.iter_batched_ref(
+                    || rand_vec(size * size),
+                    |m| oop_transpose(m.as_slice(), &mut out, size, size),
+                    BatchSize::LargeInput,
+                )
             });
         }
         group.finish();
