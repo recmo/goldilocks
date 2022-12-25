@@ -34,9 +34,8 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-flame = "0.2.0"
 
-transpose1 = { package = "transpose", version = "0.2.2" }
-transpose2 = { package = "transpose", git = "https://github.com/preiter93/transpose" }
-plonky2_field = { git = "https://github.com/mir-protocol/plonky2", optional = true }
+plonky2_field = { path = "../plonky2/field", optional = true }
+plonky2_util = { path = "../plonky2/util", optional = true }
 
 [dev-dependencies]
 proptest = "1.0.0"
