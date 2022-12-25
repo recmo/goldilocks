@@ -24,14 +24,33 @@ mod rand;
 
 pub use field::Field;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+}
+
 #[cfg(feature = "criterion")]
 #[doc(hidden)]
 pub mod bench {
     use super::*;
+    use ::rand::{thread_rng, Fill, Rng};
     use criterion::Criterion;
+    use rayon::prelude::*;
 
     pub fn group(criterion: &mut Criterion) {
         algo::bench::group(criterion);
         ntt::bench::group(criterion);
+    }
+
+    pub(crate) fn rand_vec<T>(size: usize) -> Vec<T>
+    where
+        T: Clone + Copy + Default + Send + Sync,
+        [T]: Fill,
+    {
+        let mut result = vec![T::default(); size];
+        result
+            .par_chunks_mut(1000)
+            .for_each_init(|| thread_rng(), |rng, chunk| rng.fill(chunk));
+        result
     }
 }

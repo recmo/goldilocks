@@ -1,10 +1,8 @@
 mod aarch64;
 mod generic;
+mod utils;
 
-pub use self::{
-    aarch64::mul,
-    generic::{add, inv, pow, reduce_128, reduce_64, root, shift},
-};
+pub use self::generic::{add, inv, mul, pow, reduce_128, reduce_64, root, shift};
 
 // OPT: Use a super optimizer to find optimal sequences for add, mul, neg, sub,
 // and shift.

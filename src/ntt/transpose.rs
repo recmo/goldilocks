@@ -1,6 +1,6 @@
 use super::prefetch::PrefetchIndex;
 use rayon::prelude::*;
-use std::mem::size_of;
+use std::{mem::size_of, ptr::swap_nonoverlapping};
 use tracing::{instrument, trace};
 
 // TODO: See https://github.com/ejmahler/transpose/blob/master/src/in_place.rs
@@ -146,26 +146,31 @@ fn recurse<T>(a: &mut [T], n: usize, N: usize) {
     }
 }
 
-pub fn tiled<T: Sync>(a: &mut [T], n: usize) {
-    use std::cmp::min;
-    const TILE_SIZE: usize = 32;
+pub fn tiled<T>(a: &mut [T], n: usize) {
+    use std::ptr::swap_nonoverlapping;
+    const TILE_SIZE: usize = 16;
+    debug_assert_eq!(a.len(), n * n);
+    debug_assert_eq!(n % TILE_SIZE, 0);
 
-    let a = a.as_ptr() as u64;
-
-    (0..n).into_par_iter().step_by(TILE_SIZE).for_each(|i| {
+    // (0..n).into_par_iter().step_by(TILE_SIZE).for_each(|i| {
+    for i in (0..n).step_by(TILE_SIZE) {
         for j in (i..n).step_by(TILE_SIZE) {
-            for ii in i..min(i + TILE_SIZE, n) {
-                for jj in j..min(j + TILE_SIZE, n) {
+            for ii in i..i + TILE_SIZE {
+                for jj in j..j + TILE_SIZE {
+                    let ai = ii * n + jj;
+                    let aj = jj * n + ii;
                     unsafe {
-                        let a = a as *mut T;
-                        let src = a.offset((ii * n + jj) as isize);
-                        let dst = a.offset((jj * n + ii) as isize);
-                        std::ptr::swap(src, dst);
+                        swap_nonoverlapping(a.get_unchecked_mut(ai), a.get_unchecked_mut(aj), 1);
+                        // let a = a as *mut T;
+                        // let src = a.offset(ai as isize);
+                        // let dst = a.offset(aj as isize);
+                        // std::ptr::swap(src, dst);
                     }
                 }
             }
         }
-    })
+    }
+    //})
 }
 
 #[cfg(test)]
@@ -253,10 +258,7 @@ pub mod bench {
         bench_tiled(criterion);
         bench_transpose_naive(criterion);
         bench_transpose_square_1(criterion);
-        bench_lib_transpose_inplace(criterion);
-        bench_lib_transpose(criterion);
-        bench_lib_transpose2(criterion);
-        bench_lib_transpose2_oop(criterion);
+        bench_lib_plonky2(criterion);
     }
 
     fn rand_vec(size: usize) -> Vec<Field> {
@@ -405,79 +407,17 @@ pub mod bench {
         group.finish();
     }
 
-    pub fn bench_lib_transpose_inplace(c: &mut Criterion) {
-        use ::transpose1::transpose_inplace;
-        let mut group = c.benchmark_group("transpose/lib1_ip");
-        let max = if cfg!(test) { 5 } else { 14 };
-        for i in 10..=max {
+    pub fn bench_lib_plonky2(c: &mut Criterion) {
+        use plonky2_util::transpose_in_place_square;
+        let mut group = c.benchmark_group("transpose/plonky2");
+        for i in 5..=16 {
             let size = 1_usize << i;
-            group.throughput(Throughput::Elements((size * size) as u64));
-            group.sample_size(if i < 10 { 100 } else { 10 });
-            group.bench_function(format!("{size}x{size}"), |b| {
-                let mut scratch = vec![Field::from(0); size];
-                b.iter_batched_ref(
-                    || rand_vec(size * size),
-                    |m| transpose_inplace(m.as_mut_slice(), &mut scratch, size, size),
-                    BatchSize::LargeInput,
-                )
-            });
-        }
-        group.finish();
-    }
-
-    pub fn bench_lib_transpose(c: &mut Criterion) {
-        use ::transpose1::transpose;
-        let mut group = c.benchmark_group("transpose/lib1_oop");
-        let max = if cfg!(test) { 5 } else { 16 };
-        for i in 10..=max {
-            let size = 1_usize << i;
+            let mut a = rand_vec(size * size);
             group.throughput(Throughput::Elements((size * size) as u64));
             group.sample_size(if i < 10 { 100 } else { 10 });
             group.bench_function(format!("{size}x{size}"), |b| {
                 let mut out = vec![Field::from(0); size * size];
-                b.iter_batched_ref(
-                    || rand_vec(size * size),
-                    |m| transpose(m.as_slice(), &mut out, size, size),
-                    BatchSize::LargeInput,
-                )
-            });
-        }
-        group.finish();
-    }
-
-    pub fn bench_lib_transpose2(c: &mut Criterion) {
-        use ::transpose2::ip_transpose;
-        let mut group = c.benchmark_group("transpose/lib2_ip");
-        for i in 10..=16 {
-            let size = 1_usize << i;
-            group.throughput(Throughput::Elements((size * size) as u64));
-            group.sample_size(if i < 10 { 100 } else { 10 });
-            group.bench_function(format!("{size}x{size}"), |b| {
-                let mut scratch = vec![Field::from(0); size];
-                b.iter_batched_ref(
-                    || rand_vec(size * size),
-                    |m| ip_transpose(m.as_mut_slice(), &mut scratch, size, size),
-                    BatchSize::LargeInput,
-                )
-            });
-        }
-        group.finish();
-    }
-
-    pub fn bench_lib_transpose2_oop(c: &mut Criterion) {
-        use ::transpose2::oop_transpose;
-        let mut group = c.benchmark_group("transpose/lib2_oop");
-        for i in 10..=16 {
-            let size = 1_usize << i;
-            group.throughput(Throughput::Elements((size * size) as u64));
-            group.sample_size(if i < 10 { 100 } else { 10 });
-            group.bench_function(format!("{size}x{size}"), |b| {
-                let mut out = vec![Field::from(0); size * size];
-                b.iter_batched_ref(
-                    || rand_vec(size * size),
-                    |m| oop_transpose(m.as_slice(), &mut out, size, size),
-                    BatchSize::LargeInput,
-                )
+                b.iter(|| unsafe { transpose_in_place_square(a.as_mut_slice(), i, i, 0) })
             });
         }
         group.finish();

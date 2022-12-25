@@ -5,6 +5,7 @@
 // We do a lot of intentional casting with truncation in this file.
 #![allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
 
+use super::utils::branch_hint;
 use core::mem::swap;
 
 /// p = φ² - φ + 1 = 2⁶⁴ - 2³² + 1
@@ -35,6 +36,7 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
     debug_assert!(high <= u64::MAX >> 1);
     let (mut low2, carry) = low.overflowing_sub(high);
     if carry {
+        branch_hint(); // A borrow is exceedingly rare. It is faster to branch.
         low2 = low2.wrapping_add(MODULUS);
     }
 
@@ -42,8 +44,22 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
     product -= product >> 32;
 
     let (mut result, carry) = product.overflowing_add(low2);
-    if carry || result >= MODULUS {
+    if carry {
+        // This branch is likely to happen. It should compile to a use
+        // branchless conditional operations.
         result = result.wrapping_sub(MODULUS);
+    }
+
+    // Final reduction.
+    // At this point the value is already correct mod MODULUS, but it may be
+    // larger than MODULUS. Doing this extra reduction does not have a measurable
+    // impact on performance.
+    if result >= MODULUS {
+        // This branch is unlikely to happen. It is guaranteed not to be taken
+        // if the above branch was taken. (But merging the two branches is
+        // slower.)
+        branch_hint();
+        result -= MODULUS;
     }
     debug_assert!(result < MODULUS);
     result
@@ -52,12 +68,19 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
 /// Adds two field elements.
 ///
 /// Requires `a` and `b` to be reduced.
-pub const fn add(a: u64, b: u64) -> u64 {
+pub fn add(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
     let (mut result, carry) = a.overflowing_add(b);
-    if carry || result >= MODULUS {
+    if carry {
         result = result.wrapping_sub(MODULUS);
+    }
+    if result >= MODULUS {
+        // This branch is unlikely to happen. It is guaranteed not to be taken
+        // if the above branch was taken. (But merging the two branches is
+        // slower.)
+        branch_hint();
+        result -= MODULUS;
     }
     debug_assert!(result < MODULUS);
     result
@@ -65,6 +88,7 @@ pub const fn add(a: u64, b: u64) -> u64 {
 
 /// Multiplies two field elements.
 pub fn mul(a: u64, b: u64) -> u64 {
+    // return mul_2(a, b);
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
     reduce_128((a as u128) * (b as u128))
