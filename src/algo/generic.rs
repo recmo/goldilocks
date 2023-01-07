@@ -2,10 +2,14 @@
 //!
 //! Also serve as reference implementations for tests.
 
+//! TODO: Square root: https://zcash.github.io/halo2/design/implementation/fields.html#sarkar-square-root-algorithm-table-based-variant
+
+// https://github.com/facebook/winterfell/blob/main/math/src/field/f64/mod.rs#L121
+
 // We do a lot of intentional casting with truncation in this file.
 #![allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
 
-use super::utils::branch_hint;
+use crate::utils::branch_hint;
 use core::mem::swap;
 
 /// p = φ² - φ + 1 = 2⁶⁴ - 2³² + 1
@@ -203,6 +207,7 @@ pub fn inv(a: u64) -> u64 {
     t0
 }
 
+// TODO: <https://github.com/facebook/winterfell/blob/21173bdf3e552ca7662c7aa2d34515b084ae21b0/math/src/field/f64/mod.rs#L121>
 #[allow(dead_code)]
 fn inv_addchain(a: u64) -> u64 {
     debug_assert!(a < MODULUS);

@@ -1,4 +1,5 @@
 use goldilocks_ntt::{ntt::Fft, Field};
+use plonky2_util::transpose_in_place_square;
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
@@ -42,14 +43,16 @@ fn main() {
     let mut input = rand_vec(MAX_SIZE);
 
     println!("size,duration,throughput");
-    for size in 10..=32 {
-        let size = 1_usize << size;
+    for size in 5..=16 {
+        let side = 1_usize << size;
+        let size = side * side;
         let input = &mut input[..size];
 
         let mut duration = 0.0;
         let mut count = 0;
         while duration < 5.0 {
             let start = Instant::now();
+
             input.fft();
             let end = Instant::now();
             duration += end.duration_since(start).as_secs_f64();

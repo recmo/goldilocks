@@ -1,4 +1,5 @@
 use core::mem::swap;
+use std::ops::Range;
 
 // Force the compiler to generate a branch instruction instead of conditionals.
 // Trick from [plonky2].
@@ -11,7 +12,7 @@ pub fn branch_hint() {
     }
 }
 
-pub fn gcd(mut a: u64, mut b: u64) -> u64 {
+pub fn gcd(mut a: usize, mut b: usize) -> usize {
     if a == 0 {
         return b;
     }
@@ -31,4 +32,18 @@ pub fn gcd(mut a: u64, mut b: u64) -> u64 {
         }
     }
     a << shift
+}
+
+/// Split a slice into two non-overlapping ranges.
+fn split_at_mut<T>(slice: &mut [T], a: Range<usize>, b: Range<usize>) -> (&mut [T], &mut [T]) {
+    if a.start > b.start {
+        let (b, a) = split_at_mut(slice, b, a);
+        (a, b)
+    } else {
+        let (_left, remainder) = slice.split_at_mut(a.start);
+        let (ra, remainder) = remainder.split_at_mut(a.end - a.start);
+        let (_middle, remainder) = remainder.split_at_mut(b.start - a.end);
+        let (rb, _right) = remainder.split_at_mut(b.end - b.start);
+        (ra, rb)
+    }
 }

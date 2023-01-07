@@ -12,15 +12,14 @@
 )]
 // See <https://stackoverflow.com/questions/61417452/how-to-get-a-feature-requirement-tag-in-the-documentation-generated-by-cargo-do>
 #![cfg_attr(has_doc_cfg, feature(doc_cfg))]
-// Nightly only feature flag to enable the `unlikely` compiler hint.
-#![cfg_attr(has_core_intrinsics, feature(core_intrinsics))]
 #![feature(slice_swap_unchecked)]
-#![feature(core_intrinsics)]
 
 mod algo;
 mod field;
 pub mod ntt;
 mod rand;
+mod transpose;
+mod utils;
 
 pub use field::Field;
 

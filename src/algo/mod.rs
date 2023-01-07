@@ -1,6 +1,5 @@
 mod aarch64;
 mod generic;
-mod utils;
 
 pub use self::generic::{add, inv, mul, pow, reduce_128, reduce_64, root, shift};
 
@@ -15,6 +14,5 @@ pub mod bench {
 
     pub fn group(criterion: &mut Criterion) {
         generic::bench::group(criterion);
-        aarch64::bench::group(criterion);
     }
 }
