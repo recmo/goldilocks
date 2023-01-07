@@ -239,7 +239,7 @@ mod tests {
     }
 }
 
-#[cfg(feature = "criterion")]
+#[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
     use std::mem::transmute;
@@ -258,7 +258,6 @@ pub mod bench {
         bench_tiled(criterion);
         bench_transpose_naive(criterion);
         bench_transpose_square_1(criterion);
-        bench_lib_plonky2(criterion);
     }
 
     fn rand_vec(size: usize) -> Vec<Field> {
@@ -402,22 +401,6 @@ pub mod bench {
                     |m| transpose_square_1(m.as_mut_slice(), size),
                     BatchSize::LargeInput,
                 )
-            });
-        }
-        group.finish();
-    }
-
-    pub fn bench_lib_plonky2(c: &mut Criterion) {
-        use plonky2_util::transpose_in_place_square;
-        let mut group = c.benchmark_group("transpose/plonky2");
-        for i in 5..=16 {
-            let size = 1_usize << i;
-            let mut a = rand_vec(size * size);
-            group.throughput(Throughput::Elements((size * size) as u64));
-            group.sample_size(if i < 10 { 100 } else { 10 });
-            group.bench_function(format!("{size}x{size}"), |b| {
-                let mut out = vec![Field::from(0); size * size];
-                b.iter(|| unsafe { transpose_in_place_square(a.as_mut_slice(), i, i, 0) })
             });
         }
         group.finish();

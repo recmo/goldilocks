@@ -1,17 +1,26 @@
+use crate::utils::split_at_mut;
+
+/// Row-major matrix transpose permutation.
+///
+/// For the inverse, flip width and height.
+fn permute(width: usize, height: usize, i: usize) -> usize {
+    let q = width * height - 1;
+    if i == q {
+        q
+    } else {
+        (i * height) % q
+    }
+}
 
 /// Cycle following matrix transpose.
 pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: usize) {
     assert_eq!(matrix.len(), width * height * span);
-    let stride = width * span;
 
     // Start of a row s from block i
     let row = |i| {
         debug_assert!(i < width * height);
         i * span..(i + 1) * span
     };
-
-    // Permutation function for the transpose.
-    let permute = |i| (i % height) * width + i / height;
 
     // Vector to keep track of which elements have been moved.
     let mut done = vec![false; width * height];
@@ -26,14 +35,14 @@ pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: u
         }
 
         // If the cycle length is 1, do nothing.
-        let j = permute(i);
+        let j = permute(width, height, i);
         if i == j {
             done[i] = true;
             continue;
         }
 
         // If the cycle length is 2, swap the elements.
-        let k = permute(j);
+        let k = permute(width, height, j);
         if i == k {
             let (a, b) = split_at_mut(matrix, row(i), row(j));
             a.swap_with_slice(b);
@@ -50,7 +59,7 @@ pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: u
 
         // Move the rest of the cycle.
         loop {
-            let k = permute(j);
+            let k = permute(width, height, j);
             if k == i {
                 break;
             }
@@ -65,24 +74,23 @@ pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: u
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    #[rustfmt::skip]
-    fn test_copy() {
-        let mut matrix = [
-            0, 1, 2, 
-            3, 4, 5
-        ];
-        transpose_copy(&mut matrix, 3, 2);
-        assert_eq!(matrix, [
-            0, 3, 
-            1, 4, 
-            2, 5
-        ]);
+    fn test_permute() {
+        for i in 0..6 {
+            eprintln!("{i} {}", permute(2, 3, i));
+        }
+        eprintln!("");
+        for i in 0..12 {
+            eprintln!("{i} {}", permute(2, 6, i));
+        }
+        eprintln!("");
+        for i in 0..2 {
+            eprintln!("{i} {}", permute(1, 2, i));
+        }
     }
 
     #[test]

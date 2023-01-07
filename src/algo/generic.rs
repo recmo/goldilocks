@@ -404,13 +404,12 @@ mod test {
     }
 }
 
-#[cfg(feature = "criterion")]
+#[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
     use super::*;
     use core::hint::black_box;
     use criterion::{BatchSize, Criterion};
-    use plonky2_field::types::Field;
     use rand::{thread_rng, Rng};
 
     pub fn group(criterion: &mut Criterion) {
@@ -420,9 +419,6 @@ pub mod bench {
         bench_mul(criterion);
         bench_inv(criterion);
         bench_omega(criterion);
-
-        bench_mul_plonky2(criterion);
-        bench_inv_plonky2(criterion);
     }
 
     // Helper to get an idea of the benchmark overhead
@@ -470,41 +466,12 @@ pub mod bench {
         });
     }
 
-    fn bench_mul_plonky2(criterion: &mut Criterion) {
-        use plonky2_field::goldilocks_field::GoldilocksField;
-        let mut rng = thread_rng();
-        criterion.bench_function("field/mul/plonky2", move |bencher| {
-            bencher.iter_batched(
-                || {
-                    (
-                        GoldilocksField(rng.gen::<u64>() % MODULUS),
-                        GoldilocksField(rng.gen::<u64>() % MODULUS),
-                    )
-                },
-                |(a, b)| black_box(a * b),
-                BatchSize::SmallInput,
-            );
-        });
-    }
-
     fn bench_inv(criterion: &mut Criterion) {
         let mut rng = thread_rng();
         criterion.bench_function("field/inv", move |bencher| {
             bencher.iter_batched(
                 || rng.gen::<u64>() % MODULUS,
                 |a| black_box(inv(a)),
-                BatchSize::SmallInput,
-            );
-        });
-    }
-
-    fn bench_inv_plonky2(criterion: &mut Criterion) {
-        use plonky2_field::goldilocks_field::GoldilocksField;
-        let mut rng = thread_rng();
-        criterion.bench_function("field/inv/plonky2", move |bencher| {
-            bencher.iter_batched(
-                || GoldilocksField(rng.gen::<u64>() % MODULUS),
-                |a| black_box(a.try_inverse()),
                 BatchSize::SmallInput,
             );
         });

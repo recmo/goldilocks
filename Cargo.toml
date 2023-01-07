@@ -13,7 +13,7 @@ edition = "2021"
 
 [features]
 default = []
-criterion = ["dep:criterion", "rand"]
+bench = ["dep:criterion", "rand"]
 
 [[bench]]
 name = "criterion"
@@ -24,6 +24,11 @@ required-features = ["criterion"]
 name = "ntt"
 harness = false
 required-features = ["rand"]
+
+[[bench]]
+name = "transpose"
+harness = false
+required-features = ["bench"]
 
 [dependencies]
 serde = { version = "1.0.151", optional = true }
@@ -38,7 +43,13 @@ plonky2_field = { path = "../plonky2/field", optional = true }
 plonky2_util = { path = "../plonky2/util", optional = true }
 
 [dev-dependencies]
+clap = { version = "4.0.32", features = ["derive"] }
 proptest = "1.0.0"
 
 [profile.release]
 debug = true
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+overflow-checks = false

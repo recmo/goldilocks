@@ -35,7 +35,7 @@ pub fn gcd(mut a: usize, mut b: usize) -> usize {
 }
 
 /// Split a slice into two non-overlapping ranges.
-fn split_at_mut<T>(slice: &mut [T], a: Range<usize>, b: Range<usize>) -> (&mut [T], &mut [T]) {
+pub fn split_at_mut<T>(slice: &mut [T], a: Range<usize>, b: Range<usize>) -> (&mut [T], &mut [T]) {
     if a.start > b.start {
         let (b, a) = split_at_mut(slice, b, a);
         (a, b)
