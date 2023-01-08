@@ -1,6 +1,5 @@
 use super::small::{radix_2, radix_2_twiddle};
 use crate::Field;
-use tracing::{instrument, span, Level};
 
 // TODO: Radix-4 recursion?
 

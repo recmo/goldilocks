@@ -24,9 +24,7 @@ mod utils;
 pub use field::Field;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-}
+mod tests {}
 
 #[cfg(feature = "bench")]
 #[doc(hidden)]

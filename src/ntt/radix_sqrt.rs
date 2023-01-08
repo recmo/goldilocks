@@ -60,7 +60,7 @@ pub fn radix_sqrt(values: &mut [Field], root: Field) {
             if i > 0 {
                 let i = permute_index(inner, i);
                 let inner_twiddle = root.pow(i as u64);
-                let mut outer_twiddle = inner_twiddle.clone();
+                let mut outer_twiddle = inner_twiddle;
                 for element in row.iter_mut().skip(1) {
                     *element *= outer_twiddle;
                     outer_twiddle *= inner_twiddle;

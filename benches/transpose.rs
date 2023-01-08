@@ -3,7 +3,6 @@ use goldilocks_ntt::{
     bench::{rand_vec, time},
     transpose::{transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
 };
-use std::time::Instant;
 
 #[derive(Clone, Debug, ValueEnum)]
 enum Algorithm {

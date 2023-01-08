@@ -1,6 +1,6 @@
+#![allow(non_snake_case)] // TODO
+
 use super::prefetch::PrefetchIndex;
-use rayon::prelude::*;
-use std::{mem::size_of, ptr::swap_nonoverlapping};
 use tracing::{instrument, trace};
 
 // TODO: See https://github.com/ejmahler/transpose/blob/master/src/in_place.rs
@@ -40,13 +40,12 @@ pub fn transpose_square_stretch<T>(matrix: &mut [T], size: usize, stretch: usize
 // TODO: Handle odd sizes
 fn transpose_square_1<T>(matrix: &mut [T], size: usize) {
     const CACHE_LINE_SIZE: usize = 64;
-    const PREFETCH_STRIDE: usize = 0;
     debug_assert_eq!(matrix.len(), size * size);
     if size % 2 != 0 {
         unimplemented!("Odd sizes are not supported");
     }
     // Number of elements to fetch at a time.
-    let min_fetch = std::cmp::max(1, CACHE_LINE_SIZE / std::mem::size_of::<T>());
+    let _min_fetch = std::cmp::max(1, CACHE_LINE_SIZE / std::mem::size_of::<T>());
 
     // Iterate over upper-left triangle, working in 2x2 blocks
     // Stretches of two are useful because they span a 64B cache line when T is 32

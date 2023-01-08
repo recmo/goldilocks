@@ -9,7 +9,7 @@ use crate::Field;
 pub fn radix_2(values: &mut [Field], offset: usize, stride: usize) {
     let i = offset;
     let j = offset + stride;
-    let temp = values[i].clone();
+    let temp = values[i];
     values[i] = temp + values[j];
     values[j] = temp - values[j];
 }
@@ -19,13 +19,14 @@ pub fn radix_2(values: &mut [Field], offset: usize, stride: usize) {
 pub fn radix_2_twiddle(values: &mut [Field], twiddle: Field, offset: usize, stride: usize) {
     let i = offset;
     let j = offset + stride;
-    let temp = values[i].clone();
+    let temp = values[i];
     values[j] *= twiddle;
     values[i] = temp + values[j];
     values[j] = temp - values[j];
 }
 
 #[inline(always)]
+#[allow(dead_code)]
 pub fn radix_4(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize) {
     radix_2(values, offset, 2 * stride);
     radix_2(values, offset + stride, 2 * stride);
@@ -35,6 +36,7 @@ pub fn radix_4(values: &mut [Field], twiddles: &[Field], offset: usize, stride: 
 }
 
 #[inline(always)]
+#[allow(dead_code)]
 pub fn radix_8(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize) {
     radix_4(values, twiddles, offset, 2 * stride);
     radix_4(values, twiddles, offset + stride, 2 * stride);

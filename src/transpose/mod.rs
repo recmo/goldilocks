@@ -4,7 +4,6 @@ mod square;
 
 pub use self::{cyclic::*, permute::*, square::*};
 use crate::utils::gcd;
-use std::ops::Range;
 
 /// Transpose a matrix in place.
 ///
@@ -14,8 +13,8 @@ pub fn transpose(matrix: &mut [u64], width: usize, height: usize) {
     let g = gcd(width, height);
 
     // Transpose the square blocks
-    for j in (0..height).step_by(g) {
-        for i in (0..width).step_by(g) {
+    for _j in (0..height).step_by(g) {
+        for _i in (0..width).step_by(g) {
             todo!();
             // transpose_square(&mut matrix[i + j * width..i + g + j * width],
             // block* width, g);

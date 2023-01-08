@@ -5,16 +5,24 @@ use std::{
 };
 
 pub fn transpose_copy_wo(matrix: &mut [u64], width: usize, height: usize) {
+    let n = width * height;
+    if n == 0 {
+        return;
+    }
+    let q = n - 1;
+    let inv_permute = |i| if i == q { q } else { i * width % q };
     let copy = matrix.to_vec();
-    let q = width * height - 1;
-    let inv_permute = |i| i * height % q;
     permute_wo_oop(&copy, matrix, 1, inv_permute);
 }
 
 pub fn transpose_copy_ro(matrix: &mut [u64], width: usize, height: usize) {
+    let n = width * height;
+    if n == 0 {
+        return;
+    }
+    let q = n - 1;
+    let permute = |i| if i == q { q } else { i * height % q };
     let copy = matrix.to_vec();
-    let q = width * height - 1;
-    let permute = |i| i * width % q;
     unsafe {
         // Safety: `permute` is a permutation.
         permute_ro_oop(&copy, matrix, 1, permute);
@@ -95,12 +103,71 @@ pub unsafe fn permute_ro_oop<T: Copy + Send + Sync>(
                     // Safety: Since `permute` is a permutation of `0..n`, we
                     // are guaranteed that each `i` value occurs exactly once.
                     // So none of the slices we make here can overlap.
-                    slice::from_raw_parts_mut(
-                        ptr.load(Ordering::Relaxed).offset((i * chunk) as isize),
-                        chunk,
-                    )
+                    slice::from_raw_parts_mut(ptr.load(Ordering::Relaxed).add(i * chunk), chunk)
                 };
                 dst.copy_from_slice(src);
             });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{super::transpose_copy, *};
+    use proptest::prelude::*;
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_transpose_copy_wo() {
+        let mut matrix = [
+            0, 1, 2, 
+            3, 4, 5
+        ];
+        transpose_copy_wo(&mut matrix, 3, 2);
+        assert_eq!(matrix, [
+            0, 3, 
+            1, 4, 
+            2, 5
+        ]);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_transpose_copy_ro() {
+        let mut matrix = [
+            0, 1, 2, 
+            3, 4, 5
+        ];
+        transpose_copy_ro(&mut matrix, 3, 2);
+        assert_eq!(matrix, [
+            0, 3, 
+            1, 4, 
+            2, 5
+        ]);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_transpose_copy_wo_ref() {
+        proptest!(|(width in 0_usize..100, height in 0_usize..100)| {
+            let n = width * height;
+            let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
+            let mut reference = matrix.clone();
+            transpose_copy_wo(&mut matrix, width, height);
+            transpose_copy(&mut reference, width, height);
+            assert_eq!(matrix, reference);
+        });
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_transpose_copy_ro_ref() {
+        proptest!(|(width in 0_usize..100, height in 0_usize..100)| {
+            let n = width * height;
+            let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
+            let mut reference = matrix.clone();
+            transpose_copy_ro(&mut matrix, width, height);
+            transpose_copy(&mut reference, width, height);
+            assert_eq!(matrix, reference);
+        });
     }
 }

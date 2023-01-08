@@ -3,6 +3,7 @@
 /// The permutation is it's own inverse. The permutation is currently
 /// a 'bit-reversal' one, where each index has its binary representation
 /// reversed.
+#[must_use]
 pub fn permute_index(size: usize, index: usize) -> usize {
     const USIZE_BITS: usize = 0_usize.count_zeros() as usize;
     debug_assert!(index < size);
