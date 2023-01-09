@@ -1,7 +1,8 @@
 use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
-    transpose::{transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
+    ntt_old::transpose_square_stretch,
+    permute::{transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -9,6 +10,7 @@ enum Algorithm {
     CopyRo,
     CopyWo,
     Square,
+    Old,
 }
 
 #[derive(Parser, Debug)]
@@ -61,6 +63,12 @@ fn main() {
             Algorithm::CopyRo => transpose_copy_ro(input, width, height),
             Algorithm::CopyWo => transpose_copy_wo(input, width, height),
             Algorithm::Square => transpose_square_pub(input, width, height),
+            Algorithm::Old => {
+                let size = height;
+                let stretch = width / size;
+                assert_eq!(input.len(), size * size * stretch);
+                transpose_square_stretch(input, size, stretch);
+            }
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

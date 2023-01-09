@@ -14,11 +14,11 @@
 #![cfg_attr(has_doc_cfg, feature(doc_cfg))]
 #![feature(slice_swap_unchecked)]
 
-mod algo;
 mod field;
 pub mod ntt;
+pub mod ntt_old;
+pub mod permute;
 mod rand;
-pub mod transpose;
 mod utils;
 
 pub use field::Field;
@@ -30,25 +30,30 @@ mod tests {}
 #[doc(hidden)]
 pub mod bench {
     use super::*;
-    use ::rand::{thread_rng, Fill, Rng};
+    use ::rand::{
+        distributions::{Distribution, Standard},
+        thread_rng, Rng,
+    };
     use criterion::Criterion;
     use rayon::prelude::*;
     use std::{hint::black_box, time::Instant};
 
     pub fn group(criterion: &mut Criterion) {
-        algo::bench::group(criterion);
-        ntt::bench::group(criterion);
+        field::bench::group(criterion);
+        ntt_old::bench::group(criterion);
     }
 
     pub fn rand_vec<T>(size: usize) -> Vec<T>
     where
         T: Clone + Copy + Default + Send + Sync,
-        [T]: Fill,
+        Standard: Distribution<T>,
     {
         let mut result = vec![T::default(); size];
         result
             .par_chunks_mut(1000)
-            .for_each_init(|| thread_rng(), |rng, chunk| rng.fill(chunk));
+            .for_each_init(thread_rng, |rng, chunk| {
+                chunk.iter_mut().for_each(|v| *v = rng.gen());
+            });
         result
     }
 
@@ -63,6 +68,6 @@ pub mod bench {
             duration += end.duration_since(start).as_secs_f64();
             count += 1;
         }
-        duration / count as f64
+        duration / f64::from(count)
     }
 }

@@ -12,6 +12,7 @@ pub fn branch_hint() {
     }
 }
 
+/// Greatest common divisor.
 pub fn gcd(mut a: usize, mut b: usize) -> usize {
     if a == 0 {
         return b;

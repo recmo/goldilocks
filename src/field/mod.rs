@@ -1,4 +1,5 @@
-use crate::algo;
+pub mod algo;
+
 use core::{iter, ops};
 use std::fmt;
 
@@ -36,6 +37,12 @@ impl Field {
             return None;
         }
         Some(Self(algo::root(order)))
+    }
+
+    #[inline(always)]
+    #[must_use]
+    pub fn mul_root_384(self, exp: u64) -> Self {
+        Self(algo::root_384(self.0, exp))
     }
 }
 
@@ -111,7 +118,7 @@ impl ops::Neg for Field {
 
     #[inline(always)]
     fn neg(self) -> Self {
-        Self(Self::MODULUS - self.0)
+        Self(algo::sub(0, self.0))
     }
 }
 
@@ -120,14 +127,14 @@ impl ops::Sub for Field {
 
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self(algo::add(self.0, Self::MODULUS - rhs.0))
+        Self(algo::sub(self.0, rhs.0))
     }
 }
 
 impl ops::SubAssign for Field {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
-        self.0 = algo::add(self.0, Self::MODULUS - rhs.0);
+        self.0 = algo::sub(self.0, rhs.0);
     }
 }
 
@@ -217,5 +224,16 @@ mod tests {
         fn arbitrary_with(_args: Self::Parameters) -> BoxedStrategy<Self> {
             u64::ANY.prop_map(Self::from).boxed()
         }
+    }
+}
+
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::*;
+    use criterion::Criterion;
+
+    pub fn group(criterion: &mut Criterion) {
+        algo::bench::group(criterion);
     }
 }

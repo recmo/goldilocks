@@ -1,61 +1,58 @@
-use goldilocks_ntt::{ntt::Fft, Field};
-use rand::{
-    distributions::{Distribution, Standard},
-    Rng,
-};
-use rayon::prelude::*;
-use std::time::Instant;
-use tracing::{info, instrument, trace};
-use tracing_flame::FlameLayer;
-use tracing_subscriber::{
-    fmt::format::FmtSpan, layer::SubscriberExt, registry::Registry, util::SubscriberInitExt,
+use clap::{Parser, ValueEnum};
+use goldilocks_ntt::{
+    bench::{rand_vec, time},
+    ntt::{ntt_naive, recursive::four_step},
+    ntt_old::Fft,
 };
 
-#[instrument()]
-fn rand_vec<T>(size: usize) -> Vec<T>
-where
-    T: Send,
-    Standard: Distribution<T>,
-{
-    let mut result = Vec::with_capacity(size);
-    (0..size)
-        .into_par_iter()
-        .map_init(|| rand::thread_rng(), |rng, _| rng.gen::<T>())
-        .collect_into_vec(&mut result);
-    result
+#[derive(Clone, Debug, ValueEnum)]
+enum Algorithm {
+    Naive,
+    Old,
+    Recursive,
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Ignored, but required by cargo.
+    #[arg(long)]
+    bench: bool,
+
+    /// Algorithm to test
+    #[arg(value_enum)]
+    algo: Algorithm,
+
+    /// Log₂ of the maximum number of values to test
+    #[arg(default_value_t = 20)]
+    max_exponent: usize,
 }
 
 fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .compact()
+        .init();
+    let cli = Args::parse();
+
     const MAX_SIZE: usize = 1_usize << 32;
 
-    // Set up logging and tracing
-    // let fmt_layer = tracing_subscriber::fmt::layer()
-    //     .with_span_events(FmtSpan::ENTER | FmtSpan::EXIT)
-    //     .compact();
-    // let (flame_layer, _guard) =
-    // FlameLayer::with_file("./tracing.folded").unwrap(); let flame_layer =
-    // flame_layer.with_threads_collapsed(true); tracing_subscriber::registry()
-    //     .with(fmt_layer)
-    //     .with(flame_layer)
-    //     .init();
-
+    eprintln!("Generating random input");
     let mut input = rand_vec(MAX_SIZE);
 
     println!("size,duration,throughput");
-    for size in 10..=32 {
-        let size = 1_usize << size;
+    for e in 10..=32 {
+        let size = 1 << e;
+        if size > input.len() {
+            break;
+        }
         let input = &mut input[..size];
 
-        let mut duration = 0.0;
-        let mut count = 0;
-        while duration < 5.0 {
-            let start = Instant::now();
-            input.fft();
-            let end = Instant::now();
-            duration += end.duration_since(start).as_secs_f64();
-            count += 1;
-        }
-        duration /= count as f64;
+        let duration = time(|| match cli.algo {
+            Algorithm::Naive => ntt_naive(input),
+            Algorithm::Old => input.fft(),
+            Algorithm::Recursive => four_step(input),
+        });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");
     }

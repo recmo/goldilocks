@@ -3,7 +3,7 @@ use crate::utils::split_at_mut;
 /// Row-major matrix transpose permutation.
 ///
 /// For the inverse, flip width and height.
-fn permute(width: usize, height: usize, i: usize) -> usize {
+const fn permute(width: usize, height: usize, i: usize) -> usize {
     let q = width * height - 1;
     if i == q {
         q
@@ -13,6 +13,10 @@ fn permute(width: usize, height: usize, i: usize) -> usize {
 }
 
 /// Cycle following matrix transpose.
+///
+/// # Panics
+///
+/// Panics if  `matrix.len()` does not equal `width * height * span`.
 pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: usize) {
     assert_eq!(matrix.len(), width * height * span);
 
@@ -77,21 +81,6 @@ pub fn transpose_cyclic(matrix: &mut [u64], span: usize, width: usize, height: u
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_permute() {
-        for i in 0..6 {
-            eprintln!("{i} {}", permute(2, 3, i));
-        }
-        eprintln!("");
-        for i in 0..12 {
-            eprintln!("{i} {}", permute(2, 6, i));
-        }
-        eprintln!("");
-        for i in 0..2 {
-            eprintln!("{i} {}", permute(1, 2, i));
-        }
-    }
 
     #[test]
     #[rustfmt::skip]

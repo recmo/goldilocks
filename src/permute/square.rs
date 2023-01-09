@@ -5,6 +5,11 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
+/// Transpose a square power-of-two matrix.
+///
+/// # Panics
+///
+/// Panics if `a` is not a square matrix or if `width` is not a power of two.
 pub fn transpose_square_pub(a: &mut [u64], width: usize, height: usize) {
     assert_eq!(a.len(), width * height);
     assert_eq!(width, height);
@@ -42,13 +47,13 @@ unsafe fn transpose_square(a: *mut u64, stride: usize, n: usize) {
                     a.load(Ordering::Relaxed).add(n * stride),
                     stride,
                     n,
-                )
+                );
             },
             || {
                 rayon::join(
                     || transpose_square(a.load(Ordering::Relaxed), stride, n),
                     || transpose_square(a.load(Ordering::Relaxed).add(n * stride + n), stride, n),
-                )
+                );
             },
         );
     }
@@ -86,7 +91,7 @@ unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usiz
                             b.load(Ordering::Relaxed),
                             stride,
                             n,
-                        )
+                        );
                     },
                     || {
                         transpose_swap_square(
@@ -94,7 +99,7 @@ unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usiz
                             b.load(Ordering::Relaxed).add(n * stride),
                             stride,
                             n,
-                        )
+                        );
                     },
                 )
             },
@@ -106,7 +111,7 @@ unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usiz
                             b.load(Ordering::Relaxed).add(n),
                             stride,
                             n,
-                        )
+                        );
                     },
                     || {
                         transpose_swap_square(
@@ -114,7 +119,7 @@ unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usiz
                             b.load(Ordering::Relaxed).add(n * stride + n),
                             stride,
                             n,
-                        )
+                        );
                     },
                 )
             },
@@ -134,7 +139,7 @@ mod tests {
             let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
             let mut reference = matrix.clone();
             transpose_square_pub(&mut matrix, size, size);
-            transpose_copy(&mut reference, size, size);
+            transpose_copy(&mut reference, (size, size));
             assert_eq!(matrix, reference);
         }
     }

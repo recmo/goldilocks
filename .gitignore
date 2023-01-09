@@ -1,4 +1,5 @@
 /target
+.ipynb_checkpoints
 *.folded
 *.svg
 *.png

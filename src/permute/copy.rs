@@ -32,6 +32,11 @@ pub fn transpose_copy_ro(matrix: &mut [u64], width: usize, height: usize) {
 /// Parallel permuted copy in write order.
 ///
 /// `inv_permute` is the *inverse* of the target permutation.
+///
+/// # Panics
+///
+/// Panics if `src` and `dst` have different lengths or if `chunk` does not
+/// exactly divide the length.
 pub fn permute_wo_oop<T: Copy + Send + Sync>(
     src: &[T],
     dst: &mut [T],
@@ -72,6 +77,11 @@ pub fn permute_wo_oop<T: Copy + Send + Sync>(
 ///
 /// `permute` must be a permutation. If it returns the same value twice, the
 /// result is undefined.
+///
+/// # Panics
+///
+/// Panics if `src` and `dst` have different lengths or if `chunk` does not
+/// exactly divide the length.
 pub unsafe fn permute_ro_oop<T: Copy + Send + Sync>(
     src: &[T],
     dst: &mut [T],
@@ -153,7 +163,7 @@ mod tests {
             let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
             let mut reference = matrix.clone();
             transpose_copy_wo(&mut matrix, width, height);
-            transpose_copy(&mut reference, width, height);
+            transpose_copy(&mut reference, (height, width));
             assert_eq!(matrix, reference);
         });
     }
@@ -166,7 +176,7 @@ mod tests {
             let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
             let mut reference = matrix.clone();
             transpose_copy_ro(&mut matrix, width, height);
-            transpose_copy(&mut reference, width, height);
+            transpose_copy(&mut reference, (height, width));
             assert_eq!(matrix, reference);
         });
     }

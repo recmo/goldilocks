@@ -90,6 +90,20 @@ pub fn add(a: u64, b: u64) -> u64 {
     result
 }
 
+/// Subtracts two field elements.
+///
+/// Requires `a` and `b` to be reduced.
+pub fn sub(a: u64, b: u64) -> u64 {
+    debug_assert!(a < MODULUS);
+    debug_assert!(b < MODULUS);
+    let (mut result, carry) = a.overflowing_sub(b);
+    if carry {
+        result = result.wrapping_add(MODULUS);
+    }
+    debug_assert!(result < MODULUS);
+    result
+}
+
 /// Multiplies two field elements.
 pub fn mul(a: u64, b: u64) -> u64 {
     // return mul_2(a, b);
@@ -301,6 +315,17 @@ mod test {
             let a_bc = add(a, add(b, c));
             let ab_c = add(add(a, b), c);
             assert_eq!(a_bc, ab_c);
+        });
+    }
+
+    #[test]
+    fn test_sub() {
+        proptest!(|(a: u64, b: u64)| {
+            prop_assume!(a < MODULUS);
+            prop_assume!(b < MODULUS);
+            let ab = add(a, b);
+            let ab_b = sub(ab, b);
+            assert_eq!(a, ab_b);
         });
     }
 

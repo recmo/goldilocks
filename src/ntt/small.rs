@@ -1,93 +1,135 @@
+//! Generated using `cargo run --bin codegen`
 use crate::Field;
 
-// OPT: Unchecked slice access
-// OPT: Inplace +- operation like in gcd::mat_mul.
-// OPT: Use Dev's combined REDC
-
-/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
-#[inline(always)]
-pub fn radix_2(values: &mut [Field], offset: usize, stride: usize) {
-    let i = offset;
-    let j = offset + stride;
-    let temp = values[i];
-    values[i] = temp + values[j];
-    values[j] = temp - values[j];
+/// Apply a small NTT to `values`, or return `false` if the size is not supported.
+pub fn small_ntt(values: &mut [Field]) -> bool {
+    match values.len() {
+        ..=1 => return true,
+        2 => ntt_2(values),
+        4 => ntt_4(values),
+        8 => ntt_8(values),
+        _ => return false,
+    }
+    true
 }
 
-/// Transforms (x0, x1) to (x0 + x1, x0 - x1)
-#[inline(always)]
-pub fn radix_2_twiddle(values: &mut [Field], twiddle: Field, offset: usize, stride: usize) {
-    let i = offset;
-    let j = offset + stride;
-    let temp = values[i];
-    values[j] *= twiddle;
-    values[i] = temp + values[j];
-    values[j] = temp - values[j];
+/// Size 2 NTT.
+fn ntt_2(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 2);
+    let a0 = values[0];
+    let a1 = values[1];
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    values[0] = a0;
+    values[1] = a1;
 }
 
-#[inline(always)]
-#[allow(dead_code)]
-pub fn radix_4(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize) {
-    radix_2(values, offset, 2 * stride);
-    radix_2(values, offset + stride, 2 * stride);
-    values[offset + 3 * stride] *= twiddles[1];
-    radix_2(values, offset, stride);
-    radix_2(values, offset + 2 * stride, stride);
+/// Size 4 NTT.
+fn ntt_4(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 4);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let (a0, a2) = (a0 + a2, a0 - a2);
+    let (a1, a3) = (a1 + a3, a1 - a3);
+    let a3 = a3.mul_root_384(96);
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    let (a2, a3) = (a2 + a3, a2 - a3);
+    values[0] = a0;
+    values[1] = a2;
+    values[2] = a1;
+    values[3] = a3;
 }
 
-#[inline(always)]
-#[allow(dead_code)]
-pub fn radix_8(values: &mut [Field], twiddles: &[Field], offset: usize, stride: usize) {
-    radix_4(values, twiddles, offset, 2 * stride);
-    radix_4(values, twiddles, offset + stride, 2 * stride);
-    values[offset + 3 * stride] *= twiddles[1];
-    values[offset + 5 * stride] *= twiddles[2];
-    values[offset + 7 * stride] *= twiddles[3];
-    radix_2(values, offset, stride);
-    radix_2(values, offset + 2 * stride, stride);
-    radix_2(values, offset + 4 * stride, stride);
-    radix_2(values, offset + 6 * stride, stride);
+/// Size 8 NTT.
+fn ntt_8(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 8);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let a6 = values[6];
+    let a7 = values[7];
+    let (a0, a4) = (a0 + a4, a0 - a4);
+    let (a1, a5) = (a1 + a5, a1 - a5);
+    let (a2, a6) = (a2 + a6, a2 - a6);
+    let (a3, a7) = (a3 + a7, a3 - a7);
+    let a5 = a5.mul_root_384(48);
+    let a2 = a2.mul_root_384(96);
+    let a6 = a6.mul_root_384(144);
+    let (a0, a2) = (a0 + a2, a0 - a2);
+    let (a1, a3) = (a1 + a3, a1 - a3);
+    let a3 = a3.mul_root_384(96);
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    let (a2, a3) = (a2 + a3, a2 - a3);
+    let (a4, a6) = (a4 + a6, a4 - a6);
+    let (a5, a7) = (a5 + a7, a5 - a7);
+    let a7 = a7.mul_root_384(96);
+    let (a4, a5) = (a4 + a5, a4 - a5);
+    let (a6, a7) = (a6 + a7, a6 - a7);
+    values[0] = a0;
+    values[1] = a4;
+    values[2] = a2;
+    values[3] = a6;
+    values[4] = a1;
+    values[5] = a5;
+    values[6] = a3;
+    values[7] = a7;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        super::{
-            get_twiddles,
-            tests::{arb_vec_size, ref_fft_permuted},
-        },
-        *,
-    };
-    use proptest::prelude::*;
+    use super::{super::ntt_naive, *};
 
-    proptest! {
-        #[test]
-        fn test_radix_2(values in arb_vec_size(2)) {
-            let mut expected = values.clone();
-            ref_fft_permuted(&mut expected);
-            let mut result =  values;
-            radix_2(&mut result, 0, 1);
-            prop_assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_radix_4(values in arb_vec_size(4)) {
-            let mut expected = values.clone();
-            ref_fft_permuted(&mut expected);
-            let mut result =  values;
-            let root = Field::root(4).unwrap();
-            radix_4(&mut result, &get_twiddles(root, 4), 0, 1);
-            prop_assert_eq!(result, expected);
-        }
-
-        #[test]
-        fn test_radix_8(values in arb_vec_size(8)) {
-            let mut expected = values.clone();
-            ref_fft_permuted(&mut expected);
-            let mut result =  values;
-            let root = Field::root(8).unwrap();
-            radix_8(&mut result, &get_twiddles(root, 8), 0, 1);
-            prop_assert_eq!(result, expected);
+    #[test]
+    fn test_small_ntt() {
+        for size in [0, 1, 2, 4, 8] {
+            let input = (0..size).map(Field::from).collect::<Vec<_>>();
+            let mut output = input.clone();
+            let supported = small_ntt(output.as_mut_slice());
+            assert!(supported);
+            let mut output_ref = input;
+            ntt_naive(output_ref.as_mut_slice());
+            assert_eq!(output, output_ref);
         }
     }
+
+
+    #[test]
+    fn test_ntt_2() {
+        let size = 2;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_2(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
+    #[test]
+    fn test_ntt_4() {
+        let size = 4;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_4(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
+    #[test]
+    fn test_ntt_8() {
+        let size = 8;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_8(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
 }

@@ -18,21 +18,24 @@ bench = ["dep:criterion", "rand"]
 [[bench]]
 name = "criterion"
 harness = false
-required-features = ["criterion"]
+required-features = ["bench"]
 
 [[bench]]
 name = "ntt"
 harness = false
-required-features = ["rand"]
+required-features = ["bench"]
 
 [[bench]]
 name = "transpose"
 harness = false
 required-features = ["bench"]
 
+[[bin]]
+name = "codegen"
+path = "src/bin/codegen.rs"
+
 [dependencies]
 serde = { version = "1.0.151", optional = true }
-criterion = { version = "0.4.0", optional = true } # For benchmarking only
 rand = { version = "0.8.5", optional = true }
 rayon = "1.6.1"
 tracing = "0.1.37"
@@ -41,6 +44,10 @@ tracing-flame = "0.2.0"
 
 plonky2_field = { path = "../plonky2/field", optional = true }
 plonky2_util = { path = "../plonky2/util", optional = true }
+
+
+# For benchmarking only
+criterion = { version = "0.4.0", optional = true }
 
 [dev-dependencies]
 clap = { version = "4.0.32", features = ["derive"] }

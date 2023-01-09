@@ -35,6 +35,10 @@ Check documentation coverage
 RUSTDOCFLAGS="-Z unstable-options --show-coverage"  cargo doc --workspace --all-features --no-deps
 ```
 
+```
+cargo run --bin codegen > small.rs && mv small.rs src/ntt && cargo test ntt::small
+```
+
 ## See also
 
 * [plonky2]
