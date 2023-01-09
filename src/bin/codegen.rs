@@ -31,8 +31,8 @@ fn ntt_{size}(values: &mut [Field]) {{
             transpose_copy(vars, (a, b));
             // Now vars is a 2D array of size b x a
             vars.chunks_exact_mut(a).for_each(recurse);
-            for i in 1..a {
-                for j in 1..b {
+            for i in 1..b {
+                for j in 1..a {
                     let exp = (i * j) * 384 / n;
                     let var = vars[i * a + j];
                     println!("    let {var} = {var}.mul_root_384({exp});")
@@ -55,7 +55,7 @@ fn ntt_{size}(values: &mut [Field]) {{
 }
 
 fn main() {
-    let sizes = [2, 4, 8]; // , 16, 32, 64, 128];
+    let sizes = [2, 4, 8, 16, 32, 64, 128];
 
     // Generate header and dispatch function
     println!(

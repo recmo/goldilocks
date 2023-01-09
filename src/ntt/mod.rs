@@ -4,6 +4,9 @@ pub mod small;
 use crate::Field;
 
 pub fn ntt_naive(v: &mut [Field]) {
+    if v.is_empty() {
+        return;
+    }
     let root = Field::root(v.len() as u64)
         .expect("Vector length does not divide multiplicative group order.");
 
