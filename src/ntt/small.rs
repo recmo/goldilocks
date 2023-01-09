@@ -1,7 +1,8 @@
 //! Generated using `cargo run --bin codegen`
 use crate::Field;
 
-/// Apply a small NTT to `values`, or return `false` if the size is not supported.
+/// Apply a small NTT to `values`, or return `false` if the size is not
+/// supported.
 pub fn small_ntt(values: &mut [Field]) -> bool {
     match values.len() {
         ..=1 => return true,
@@ -1868,7 +1869,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn test_ntt_2() {
         let size = 2;
@@ -1879,7 +1879,6 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
-
 
     #[test]
     fn test_ntt_4() {
@@ -1892,7 +1891,6 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
-
     #[test]
     fn test_ntt_8() {
         let size = 8;
@@ -1903,7 +1901,6 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
-
 
     #[test]
     fn test_ntt_16() {
@@ -1916,7 +1913,6 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
-
     #[test]
     fn test_ntt_32() {
         let size = 32;
@@ -1927,7 +1923,6 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
-
 
     #[test]
     fn test_ntt_64() {
@@ -1940,7 +1935,6 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
-
     #[test]
     fn test_ntt_128() {
         let size = 128;
@@ -1951,5 +1945,4 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
-
 }

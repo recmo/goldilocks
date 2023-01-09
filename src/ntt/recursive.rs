@@ -18,9 +18,9 @@ pub fn four_step(value: &mut [Field]) {
     }
 
     // Try an optimized small NTT.
-    if small_ntt(value) {
-        return;
-    }
+    // if small_ntt(value) {
+    //     return;
+    // }
 
     // Base case for prime sizes.
     if n == 2 || n == 3 || n == 5 || n == 17 || n == 257 || n == 65537 {
@@ -38,22 +38,22 @@ pub fn four_step(value: &mut [Field]) {
     // Reinterpret as a × b matrix.
 
     // Transpose to b × a matrix.
-    transpose_copy(value, (b, a));
+    transpose_copy(value, (a, b));
 
     // Compute `a`-sized FFTs.
     value.chunks_exact_mut(a).for_each(four_step);
 
     // Apply twiddle factors.
-    twiddle(value, b, a);
+    twiddle(value, (b, a));
 
     // Transpose to a × b matrix.
-    transpose_copy(value, (a, b));
+    transpose_copy(value, (b, a));
 
     // Compute `b`-sized FFTs.
     value.chunks_exact_mut(b).for_each(four_step);
 
     // Transpose back to get results in order.
-    transpose_copy(value, (b, a));
+    transpose_copy(value, (a, b));
 }
 
 /// Goldilocks divisor split.
@@ -77,7 +77,7 @@ pub fn divisor_split(n: usize) -> usize {
     k << shift
 }
 
-fn twiddle(value: &mut [Field], rows: usize, cols: usize) {
+fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
     assert_eq!(value.len(), rows * cols);
 
     let root = Field::root(value.len() as u64)
@@ -86,15 +86,15 @@ fn twiddle(value: &mut [Field], rows: usize, cols: usize) {
     debug_assert_eq!(root.pow(value.len() as u64), Field::from(1));
 
     let mut omega_col = root;
-    for j in 1..cols {
+    for j in 1..rows {
         let mut omega_row = omega_col;
-        for i in 1..rows {
+        for i in 1..cols {
             value[j * cols + i] *= omega_row;
-            if i < rows - 1 {
+            if i < cols - 1 {
                 omega_row *= omega_col;
             }
         }
-        if j < cols - 1 {
+        if j < rows - 1 {
             omega_col *= root;
         }
     }
@@ -132,7 +132,6 @@ mod tests {
         for twos in 0..10 {
             let size = 1 << twos;
             let size = size * size;
-            dbg!(size);
             let input = (0..size).map(Field::from).collect::<Vec<_>>();
             let mut output = input.clone();
             four_step(&mut output);
@@ -147,7 +146,6 @@ mod tests {
         for twos in 0..10 {
             let size = 1 << twos;
             let size = size * size;
-            dbg!(size);
             let input = (0..size).map(Field::from).collect::<Vec<_>>();
             let mut output = input.clone();
             four_step(&mut output);
