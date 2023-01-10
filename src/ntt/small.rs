@@ -1,17 +1,22 @@
 //! Generated using `cargo run --bin codegen`
 use crate::Field;
 
-/// Apply a small NTT to `values`, or return `false` if the size is not
-/// supported.
+/// Apply a small NTT to `values`, or return `false` if the size is not supported.
 pub fn small_ntt(values: &mut [Field]) -> bool {
     match values.len() {
         ..=1 => return true,
         2 => ntt_2(values),
+        3 => ntt_3(values),
         4 => ntt_4(values),
+        6 => ntt_6(values),
         8 => ntt_8(values),
+        12 => ntt_12(values),
         16 => ntt_16(values),
+        24 => ntt_24(values),
         32 => ntt_32(values),
+        48 => ntt_48(values),
         64 => ntt_64(values),
+        96 => ntt_96(values),
         128 => ntt_128(values),
         _ => return false,
     }
@@ -26,6 +31,20 @@ fn ntt_2(values: &mut [Field]) {
     let (a0, a1) = (a0 + a1, a0 - a1);
     values[0] = a0;
     values[1] = a1;
+}
+
+/// Size 3 NTT.
+fn ntt_3(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 3);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let (a0, a1, a2) = (a0 + a1 + a2,
+        a0 + a1.mul_root_384(128) + a2.mul_root_384(256),
+        a0 + a1.mul_root_384(256) + a2.mul_root_384(128));
+    values[0] = a0;
+    values[1] = a1;
+    values[2] = a2;
 }
 
 /// Size 4 NTT.
@@ -44,6 +63,34 @@ fn ntt_4(values: &mut [Field]) {
     values[1] = a2;
     values[2] = a1;
     values[3] = a3;
+}
+
+/// Size 6 NTT.
+fn ntt_6(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 6);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let (a0, a3) = (a0 + a3, a0 - a3);
+    let (a1, a4) = (a1 + a4, a1 - a4);
+    let (a2, a5) = (a2 + a5, a2 - a5);
+    let a4 = a4.mul_root_384(64);
+    let a5 = a5.mul_root_384(128);
+    let (a0, a1, a2) = (a0 + a1 + a2,
+        a0 + a1.mul_root_384(128) + a2.mul_root_384(256),
+        a0 + a1.mul_root_384(256) + a2.mul_root_384(128));
+    let (a3, a4, a5) = (a3 + a4 + a5,
+        a3 + a4.mul_root_384(128) + a5.mul_root_384(256),
+        a3 + a4.mul_root_384(256) + a5.mul_root_384(128));
+    values[0] = a0;
+    values[1] = a3;
+    values[2] = a1;
+    values[3] = a4;
+    values[4] = a2;
+    values[5] = a5;
 }
 
 /// Size 8 NTT.
@@ -82,6 +129,68 @@ fn ntt_8(values: &mut [Field]) {
     values[5] = a5;
     values[6] = a3;
     values[7] = a7;
+}
+
+/// Size 12 NTT.
+fn ntt_12(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 12);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let a6 = values[6];
+    let a7 = values[7];
+    let a8 = values[8];
+    let a9 = values[9];
+    let a10 = values[10];
+    let a11 = values[11];
+    let (a0, a4, a8) = (a0 + a4 + a8,
+        a0 + a4.mul_root_384(128) + a8.mul_root_384(256),
+        a0 + a4.mul_root_384(256) + a8.mul_root_384(128));
+    let (a1, a5, a9) = (a1 + a5 + a9,
+        a1 + a5.mul_root_384(128) + a9.mul_root_384(256),
+        a1 + a5.mul_root_384(256) + a9.mul_root_384(128));
+    let (a2, a6, a10) = (a2 + a6 + a10,
+        a2 + a6.mul_root_384(128) + a10.mul_root_384(256),
+        a2 + a6.mul_root_384(256) + a10.mul_root_384(128));
+    let (a3, a7, a11) = (a3 + a7 + a11,
+        a3 + a7.mul_root_384(128) + a11.mul_root_384(256),
+        a3 + a7.mul_root_384(256) + a11.mul_root_384(128));
+    let a5 = a5.mul_root_384(32);
+    let a9 = a9.mul_root_384(64);
+    let a6 = a6.mul_root_384(64);
+    let a10 = a10.mul_root_384(128);
+    let a7 = a7.mul_root_384(96);
+    let a11 = a11.mul_root_384(192);
+    let (a0, a2) = (a0 + a2, a0 - a2);
+    let (a1, a3) = (a1 + a3, a1 - a3);
+    let a3 = a3.mul_root_384(96);
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    let (a2, a3) = (a2 + a3, a2 - a3);
+    let (a4, a6) = (a4 + a6, a4 - a6);
+    let (a5, a7) = (a5 + a7, a5 - a7);
+    let a7 = a7.mul_root_384(96);
+    let (a4, a5) = (a4 + a5, a4 - a5);
+    let (a6, a7) = (a6 + a7, a6 - a7);
+    let (a8, a10) = (a8 + a10, a8 - a10);
+    let (a9, a11) = (a9 + a11, a9 - a11);
+    let a11 = a11.mul_root_384(96);
+    let (a8, a9) = (a8 + a9, a8 - a9);
+    let (a10, a11) = (a10 + a11, a10 - a11);
+    values[0] = a0;
+    values[1] = a4;
+    values[2] = a8;
+    values[3] = a2;
+    values[4] = a6;
+    values[5] = a10;
+    values[6] = a1;
+    values[7] = a5;
+    values[8] = a9;
+    values[9] = a3;
+    values[10] = a7;
+    values[11] = a11;
 }
 
 /// Size 16 NTT.
@@ -168,6 +277,148 @@ fn ntt_16(values: &mut [Field]) {
     values[13] = a11;
     values[14] = a7;
     values[15] = a15;
+}
+
+/// Size 24 NTT.
+fn ntt_24(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 24);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let a6 = values[6];
+    let a7 = values[7];
+    let a8 = values[8];
+    let a9 = values[9];
+    let a10 = values[10];
+    let a11 = values[11];
+    let a12 = values[12];
+    let a13 = values[13];
+    let a14 = values[14];
+    let a15 = values[15];
+    let a16 = values[16];
+    let a17 = values[17];
+    let a18 = values[18];
+    let a19 = values[19];
+    let a20 = values[20];
+    let a21 = values[21];
+    let a22 = values[22];
+    let a23 = values[23];
+    let (a0, a12) = (a0 + a12, a0 - a12);
+    let (a6, a18) = (a6 + a18, a6 - a18);
+    let a18 = a18.mul_root_384(96);
+    let (a0, a6) = (a0 + a6, a0 - a6);
+    let (a12, a18) = (a12 + a18, a12 - a18);
+    let (a1, a13) = (a1 + a13, a1 - a13);
+    let (a7, a19) = (a7 + a19, a7 - a19);
+    let a19 = a19.mul_root_384(96);
+    let (a1, a7) = (a1 + a7, a1 - a7);
+    let (a13, a19) = (a13 + a19, a13 - a19);
+    let (a2, a14) = (a2 + a14, a2 - a14);
+    let (a8, a20) = (a8 + a20, a8 - a20);
+    let a20 = a20.mul_root_384(96);
+    let (a2, a8) = (a2 + a8, a2 - a8);
+    let (a14, a20) = (a14 + a20, a14 - a20);
+    let (a3, a15) = (a3 + a15, a3 - a15);
+    let (a9, a21) = (a9 + a21, a9 - a21);
+    let a21 = a21.mul_root_384(96);
+    let (a3, a9) = (a3 + a9, a3 - a9);
+    let (a15, a21) = (a15 + a21, a15 - a21);
+    let (a4, a16) = (a4 + a16, a4 - a16);
+    let (a10, a22) = (a10 + a22, a10 - a22);
+    let a22 = a22.mul_root_384(96);
+    let (a4, a10) = (a4 + a10, a4 - a10);
+    let (a16, a22) = (a16 + a22, a16 - a22);
+    let (a5, a17) = (a5 + a17, a5 - a17);
+    let (a11, a23) = (a11 + a23, a11 - a23);
+    let a23 = a23.mul_root_384(96);
+    let (a5, a11) = (a5 + a11, a5 - a11);
+    let (a17, a23) = (a17 + a23, a17 - a23);
+    let a13 = a13.mul_root_384(16);
+    let a7 = a7.mul_root_384(32);
+    let a19 = a19.mul_root_384(48);
+    let a14 = a14.mul_root_384(32);
+    let a8 = a8.mul_root_384(64);
+    let a20 = a20.mul_root_384(96);
+    let a15 = a15.mul_root_384(48);
+    let a9 = a9.mul_root_384(96);
+    let a21 = a21.mul_root_384(144);
+    let a16 = a16.mul_root_384(64);
+    let a10 = a10.mul_root_384(128);
+    let a22 = a22.mul_root_384(192);
+    let a17 = a17.mul_root_384(80);
+    let a11 = a11.mul_root_384(160);
+    let a23 = a23.mul_root_384(240);
+    let (a0, a3) = (a0 + a3, a0 - a3);
+    let (a1, a4) = (a1 + a4, a1 - a4);
+    let (a2, a5) = (a2 + a5, a2 - a5);
+    let a4 = a4.mul_root_384(64);
+    let a5 = a5.mul_root_384(128);
+    let (a0, a1, a2) = (a0 + a1 + a2,
+        a0 + a1.mul_root_384(128) + a2.mul_root_384(256),
+        a0 + a1.mul_root_384(256) + a2.mul_root_384(128));
+    let (a3, a4, a5) = (a3 + a4 + a5,
+        a3 + a4.mul_root_384(128) + a5.mul_root_384(256),
+        a3 + a4.mul_root_384(256) + a5.mul_root_384(128));
+    let (a12, a15) = (a12 + a15, a12 - a15);
+    let (a13, a16) = (a13 + a16, a13 - a16);
+    let (a14, a17) = (a14 + a17, a14 - a17);
+    let a16 = a16.mul_root_384(64);
+    let a17 = a17.mul_root_384(128);
+    let (a12, a13, a14) = (a12 + a13 + a14,
+        a12 + a13.mul_root_384(128) + a14.mul_root_384(256),
+        a12 + a13.mul_root_384(256) + a14.mul_root_384(128));
+    let (a15, a16, a17) = (a15 + a16 + a17,
+        a15 + a16.mul_root_384(128) + a17.mul_root_384(256),
+        a15 + a16.mul_root_384(256) + a17.mul_root_384(128));
+    let (a6, a9) = (a6 + a9, a6 - a9);
+    let (a7, a10) = (a7 + a10, a7 - a10);
+    let (a8, a11) = (a8 + a11, a8 - a11);
+    let a10 = a10.mul_root_384(64);
+    let a11 = a11.mul_root_384(128);
+    let (a6, a7, a8) = (a6 + a7 + a8,
+        a6 + a7.mul_root_384(128) + a8.mul_root_384(256),
+        a6 + a7.mul_root_384(256) + a8.mul_root_384(128));
+    let (a9, a10, a11) = (a9 + a10 + a11,
+        a9 + a10.mul_root_384(128) + a11.mul_root_384(256),
+        a9 + a10.mul_root_384(256) + a11.mul_root_384(128));
+    let (a18, a21) = (a18 + a21, a18 - a21);
+    let (a19, a22) = (a19 + a22, a19 - a22);
+    let (a20, a23) = (a20 + a23, a20 - a23);
+    let a22 = a22.mul_root_384(64);
+    let a23 = a23.mul_root_384(128);
+    let (a18, a19, a20) = (a18 + a19 + a20,
+        a18 + a19.mul_root_384(128) + a20.mul_root_384(256),
+        a18 + a19.mul_root_384(256) + a20.mul_root_384(128));
+    let (a21, a22, a23) = (a21 + a22 + a23,
+        a21 + a22.mul_root_384(128) + a23.mul_root_384(256),
+        a21 + a22.mul_root_384(256) + a23.mul_root_384(128));
+    values[0] = a0;
+    values[1] = a12;
+    values[2] = a6;
+    values[3] = a18;
+    values[4] = a3;
+    values[5] = a15;
+    values[6] = a9;
+    values[7] = a21;
+    values[8] = a1;
+    values[9] = a13;
+    values[10] = a7;
+    values[11] = a19;
+    values[12] = a4;
+    values[13] = a16;
+    values[14] = a10;
+    values[15] = a22;
+    values[16] = a2;
+    values[17] = a14;
+    values[18] = a8;
+    values[19] = a20;
+    values[20] = a5;
+    values[21] = a17;
+    values[22] = a11;
+    values[23] = a23;
 }
 
 /// Size 32 NTT.
@@ -366,6 +617,332 @@ fn ntt_32(values: &mut [Field]) {
     values[29] = a23;
     values[30] = a15;
     values[31] = a31;
+}
+
+/// Size 48 NTT.
+fn ntt_48(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 48);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let a6 = values[6];
+    let a7 = values[7];
+    let a8 = values[8];
+    let a9 = values[9];
+    let a10 = values[10];
+    let a11 = values[11];
+    let a12 = values[12];
+    let a13 = values[13];
+    let a14 = values[14];
+    let a15 = values[15];
+    let a16 = values[16];
+    let a17 = values[17];
+    let a18 = values[18];
+    let a19 = values[19];
+    let a20 = values[20];
+    let a21 = values[21];
+    let a22 = values[22];
+    let a23 = values[23];
+    let a24 = values[24];
+    let a25 = values[25];
+    let a26 = values[26];
+    let a27 = values[27];
+    let a28 = values[28];
+    let a29 = values[29];
+    let a30 = values[30];
+    let a31 = values[31];
+    let a32 = values[32];
+    let a33 = values[33];
+    let a34 = values[34];
+    let a35 = values[35];
+    let a36 = values[36];
+    let a37 = values[37];
+    let a38 = values[38];
+    let a39 = values[39];
+    let a40 = values[40];
+    let a41 = values[41];
+    let a42 = values[42];
+    let a43 = values[43];
+    let a44 = values[44];
+    let a45 = values[45];
+    let a46 = values[46];
+    let a47 = values[47];
+    let (a0, a24) = (a0 + a24, a0 - a24);
+    let (a8, a32) = (a8 + a32, a8 - a32);
+    let (a16, a40) = (a16 + a40, a16 - a40);
+    let a32 = a32.mul_root_384(64);
+    let a40 = a40.mul_root_384(128);
+    let (a0, a8, a16) = (a0 + a8 + a16,
+        a0 + a8.mul_root_384(128) + a16.mul_root_384(256),
+        a0 + a8.mul_root_384(256) + a16.mul_root_384(128));
+    let (a24, a32, a40) = (a24 + a32 + a40,
+        a24 + a32.mul_root_384(128) + a40.mul_root_384(256),
+        a24 + a32.mul_root_384(256) + a40.mul_root_384(128));
+    let (a1, a25) = (a1 + a25, a1 - a25);
+    let (a9, a33) = (a9 + a33, a9 - a33);
+    let (a17, a41) = (a17 + a41, a17 - a41);
+    let a33 = a33.mul_root_384(64);
+    let a41 = a41.mul_root_384(128);
+    let (a1, a9, a17) = (a1 + a9 + a17,
+        a1 + a9.mul_root_384(128) + a17.mul_root_384(256),
+        a1 + a9.mul_root_384(256) + a17.mul_root_384(128));
+    let (a25, a33, a41) = (a25 + a33 + a41,
+        a25 + a33.mul_root_384(128) + a41.mul_root_384(256),
+        a25 + a33.mul_root_384(256) + a41.mul_root_384(128));
+    let (a2, a26) = (a2 + a26, a2 - a26);
+    let (a10, a34) = (a10 + a34, a10 - a34);
+    let (a18, a42) = (a18 + a42, a18 - a42);
+    let a34 = a34.mul_root_384(64);
+    let a42 = a42.mul_root_384(128);
+    let (a2, a10, a18) = (a2 + a10 + a18,
+        a2 + a10.mul_root_384(128) + a18.mul_root_384(256),
+        a2 + a10.mul_root_384(256) + a18.mul_root_384(128));
+    let (a26, a34, a42) = (a26 + a34 + a42,
+        a26 + a34.mul_root_384(128) + a42.mul_root_384(256),
+        a26 + a34.mul_root_384(256) + a42.mul_root_384(128));
+    let (a3, a27) = (a3 + a27, a3 - a27);
+    let (a11, a35) = (a11 + a35, a11 - a35);
+    let (a19, a43) = (a19 + a43, a19 - a43);
+    let a35 = a35.mul_root_384(64);
+    let a43 = a43.mul_root_384(128);
+    let (a3, a11, a19) = (a3 + a11 + a19,
+        a3 + a11.mul_root_384(128) + a19.mul_root_384(256),
+        a3 + a11.mul_root_384(256) + a19.mul_root_384(128));
+    let (a27, a35, a43) = (a27 + a35 + a43,
+        a27 + a35.mul_root_384(128) + a43.mul_root_384(256),
+        a27 + a35.mul_root_384(256) + a43.mul_root_384(128));
+    let (a4, a28) = (a4 + a28, a4 - a28);
+    let (a12, a36) = (a12 + a36, a12 - a36);
+    let (a20, a44) = (a20 + a44, a20 - a44);
+    let a36 = a36.mul_root_384(64);
+    let a44 = a44.mul_root_384(128);
+    let (a4, a12, a20) = (a4 + a12 + a20,
+        a4 + a12.mul_root_384(128) + a20.mul_root_384(256),
+        a4 + a12.mul_root_384(256) + a20.mul_root_384(128));
+    let (a28, a36, a44) = (a28 + a36 + a44,
+        a28 + a36.mul_root_384(128) + a44.mul_root_384(256),
+        a28 + a36.mul_root_384(256) + a44.mul_root_384(128));
+    let (a5, a29) = (a5 + a29, a5 - a29);
+    let (a13, a37) = (a13 + a37, a13 - a37);
+    let (a21, a45) = (a21 + a45, a21 - a45);
+    let a37 = a37.mul_root_384(64);
+    let a45 = a45.mul_root_384(128);
+    let (a5, a13, a21) = (a5 + a13 + a21,
+        a5 + a13.mul_root_384(128) + a21.mul_root_384(256),
+        a5 + a13.mul_root_384(256) + a21.mul_root_384(128));
+    let (a29, a37, a45) = (a29 + a37 + a45,
+        a29 + a37.mul_root_384(128) + a45.mul_root_384(256),
+        a29 + a37.mul_root_384(256) + a45.mul_root_384(128));
+    let (a6, a30) = (a6 + a30, a6 - a30);
+    let (a14, a38) = (a14 + a38, a14 - a38);
+    let (a22, a46) = (a22 + a46, a22 - a46);
+    let a38 = a38.mul_root_384(64);
+    let a46 = a46.mul_root_384(128);
+    let (a6, a14, a22) = (a6 + a14 + a22,
+        a6 + a14.mul_root_384(128) + a22.mul_root_384(256),
+        a6 + a14.mul_root_384(256) + a22.mul_root_384(128));
+    let (a30, a38, a46) = (a30 + a38 + a46,
+        a30 + a38.mul_root_384(128) + a46.mul_root_384(256),
+        a30 + a38.mul_root_384(256) + a46.mul_root_384(128));
+    let (a7, a31) = (a7 + a31, a7 - a31);
+    let (a15, a39) = (a15 + a39, a15 - a39);
+    let (a23, a47) = (a23 + a47, a23 - a47);
+    let a39 = a39.mul_root_384(64);
+    let a47 = a47.mul_root_384(128);
+    let (a7, a15, a23) = (a7 + a15 + a23,
+        a7 + a15.mul_root_384(128) + a23.mul_root_384(256),
+        a7 + a15.mul_root_384(256) + a23.mul_root_384(128));
+    let (a31, a39, a47) = (a31 + a39 + a47,
+        a31 + a39.mul_root_384(128) + a47.mul_root_384(256),
+        a31 + a39.mul_root_384(256) + a47.mul_root_384(128));
+    let a25 = a25.mul_root_384(8);
+    let a9 = a9.mul_root_384(16);
+    let a33 = a33.mul_root_384(24);
+    let a17 = a17.mul_root_384(32);
+    let a41 = a41.mul_root_384(40);
+    let a26 = a26.mul_root_384(16);
+    let a10 = a10.mul_root_384(32);
+    let a34 = a34.mul_root_384(48);
+    let a18 = a18.mul_root_384(64);
+    let a42 = a42.mul_root_384(80);
+    let a27 = a27.mul_root_384(24);
+    let a11 = a11.mul_root_384(48);
+    let a35 = a35.mul_root_384(72);
+    let a19 = a19.mul_root_384(96);
+    let a43 = a43.mul_root_384(120);
+    let a28 = a28.mul_root_384(32);
+    let a12 = a12.mul_root_384(64);
+    let a36 = a36.mul_root_384(96);
+    let a20 = a20.mul_root_384(128);
+    let a44 = a44.mul_root_384(160);
+    let a29 = a29.mul_root_384(40);
+    let a13 = a13.mul_root_384(80);
+    let a37 = a37.mul_root_384(120);
+    let a21 = a21.mul_root_384(160);
+    let a45 = a45.mul_root_384(200);
+    let a30 = a30.mul_root_384(48);
+    let a14 = a14.mul_root_384(96);
+    let a38 = a38.mul_root_384(144);
+    let a22 = a22.mul_root_384(192);
+    let a46 = a46.mul_root_384(240);
+    let a31 = a31.mul_root_384(56);
+    let a15 = a15.mul_root_384(112);
+    let a39 = a39.mul_root_384(168);
+    let a23 = a23.mul_root_384(224);
+    let a47 = a47.mul_root_384(280);
+    let (a0, a4) = (a0 + a4, a0 - a4);
+    let (a1, a5) = (a1 + a5, a1 - a5);
+    let (a2, a6) = (a2 + a6, a2 - a6);
+    let (a3, a7) = (a3 + a7, a3 - a7);
+    let a5 = a5.mul_root_384(48);
+    let a6 = a6.mul_root_384(96);
+    let a7 = a7.mul_root_384(144);
+    let (a0, a2) = (a0 + a2, a0 - a2);
+    let (a1, a3) = (a1 + a3, a1 - a3);
+    let a3 = a3.mul_root_384(96);
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    let (a2, a3) = (a2 + a3, a2 - a3);
+    let (a4, a6) = (a4 + a6, a4 - a6);
+    let (a5, a7) = (a5 + a7, a5 - a7);
+    let a7 = a7.mul_root_384(96);
+    let (a4, a5) = (a4 + a5, a4 - a5);
+    let (a6, a7) = (a6 + a7, a6 - a7);
+    let (a24, a28) = (a24 + a28, a24 - a28);
+    let (a25, a29) = (a25 + a29, a25 - a29);
+    let (a26, a30) = (a26 + a30, a26 - a30);
+    let (a27, a31) = (a27 + a31, a27 - a31);
+    let a29 = a29.mul_root_384(48);
+    let a30 = a30.mul_root_384(96);
+    let a31 = a31.mul_root_384(144);
+    let (a24, a26) = (a24 + a26, a24 - a26);
+    let (a25, a27) = (a25 + a27, a25 - a27);
+    let a27 = a27.mul_root_384(96);
+    let (a24, a25) = (a24 + a25, a24 - a25);
+    let (a26, a27) = (a26 + a27, a26 - a27);
+    let (a28, a30) = (a28 + a30, a28 - a30);
+    let (a29, a31) = (a29 + a31, a29 - a31);
+    let a31 = a31.mul_root_384(96);
+    let (a28, a29) = (a28 + a29, a28 - a29);
+    let (a30, a31) = (a30 + a31, a30 - a31);
+    let (a8, a12) = (a8 + a12, a8 - a12);
+    let (a9, a13) = (a9 + a13, a9 - a13);
+    let (a10, a14) = (a10 + a14, a10 - a14);
+    let (a11, a15) = (a11 + a15, a11 - a15);
+    let a13 = a13.mul_root_384(48);
+    let a14 = a14.mul_root_384(96);
+    let a15 = a15.mul_root_384(144);
+    let (a8, a10) = (a8 + a10, a8 - a10);
+    let (a9, a11) = (a9 + a11, a9 - a11);
+    let a11 = a11.mul_root_384(96);
+    let (a8, a9) = (a8 + a9, a8 - a9);
+    let (a10, a11) = (a10 + a11, a10 - a11);
+    let (a12, a14) = (a12 + a14, a12 - a14);
+    let (a13, a15) = (a13 + a15, a13 - a15);
+    let a15 = a15.mul_root_384(96);
+    let (a12, a13) = (a12 + a13, a12 - a13);
+    let (a14, a15) = (a14 + a15, a14 - a15);
+    let (a32, a36) = (a32 + a36, a32 - a36);
+    let (a33, a37) = (a33 + a37, a33 - a37);
+    let (a34, a38) = (a34 + a38, a34 - a38);
+    let (a35, a39) = (a35 + a39, a35 - a39);
+    let a37 = a37.mul_root_384(48);
+    let a38 = a38.mul_root_384(96);
+    let a39 = a39.mul_root_384(144);
+    let (a32, a34) = (a32 + a34, a32 - a34);
+    let (a33, a35) = (a33 + a35, a33 - a35);
+    let a35 = a35.mul_root_384(96);
+    let (a32, a33) = (a32 + a33, a32 - a33);
+    let (a34, a35) = (a34 + a35, a34 - a35);
+    let (a36, a38) = (a36 + a38, a36 - a38);
+    let (a37, a39) = (a37 + a39, a37 - a39);
+    let a39 = a39.mul_root_384(96);
+    let (a36, a37) = (a36 + a37, a36 - a37);
+    let (a38, a39) = (a38 + a39, a38 - a39);
+    let (a16, a20) = (a16 + a20, a16 - a20);
+    let (a17, a21) = (a17 + a21, a17 - a21);
+    let (a18, a22) = (a18 + a22, a18 - a22);
+    let (a19, a23) = (a19 + a23, a19 - a23);
+    let a21 = a21.mul_root_384(48);
+    let a22 = a22.mul_root_384(96);
+    let a23 = a23.mul_root_384(144);
+    let (a16, a18) = (a16 + a18, a16 - a18);
+    let (a17, a19) = (a17 + a19, a17 - a19);
+    let a19 = a19.mul_root_384(96);
+    let (a16, a17) = (a16 + a17, a16 - a17);
+    let (a18, a19) = (a18 + a19, a18 - a19);
+    let (a20, a22) = (a20 + a22, a20 - a22);
+    let (a21, a23) = (a21 + a23, a21 - a23);
+    let a23 = a23.mul_root_384(96);
+    let (a20, a21) = (a20 + a21, a20 - a21);
+    let (a22, a23) = (a22 + a23, a22 - a23);
+    let (a40, a44) = (a40 + a44, a40 - a44);
+    let (a41, a45) = (a41 + a45, a41 - a45);
+    let (a42, a46) = (a42 + a46, a42 - a46);
+    let (a43, a47) = (a43 + a47, a43 - a47);
+    let a45 = a45.mul_root_384(48);
+    let a46 = a46.mul_root_384(96);
+    let a47 = a47.mul_root_384(144);
+    let (a40, a42) = (a40 + a42, a40 - a42);
+    let (a41, a43) = (a41 + a43, a41 - a43);
+    let a43 = a43.mul_root_384(96);
+    let (a40, a41) = (a40 + a41, a40 - a41);
+    let (a42, a43) = (a42 + a43, a42 - a43);
+    let (a44, a46) = (a44 + a46, a44 - a46);
+    let (a45, a47) = (a45 + a47, a45 - a47);
+    let a47 = a47.mul_root_384(96);
+    let (a44, a45) = (a44 + a45, a44 - a45);
+    let (a46, a47) = (a46 + a47, a46 - a47);
+    values[0] = a0;
+    values[1] = a24;
+    values[2] = a8;
+    values[3] = a32;
+    values[4] = a16;
+    values[5] = a40;
+    values[6] = a4;
+    values[7] = a28;
+    values[8] = a12;
+    values[9] = a36;
+    values[10] = a20;
+    values[11] = a44;
+    values[12] = a2;
+    values[13] = a26;
+    values[14] = a10;
+    values[15] = a34;
+    values[16] = a18;
+    values[17] = a42;
+    values[18] = a6;
+    values[19] = a30;
+    values[20] = a14;
+    values[21] = a38;
+    values[22] = a22;
+    values[23] = a46;
+    values[24] = a1;
+    values[25] = a25;
+    values[26] = a9;
+    values[27] = a33;
+    values[28] = a17;
+    values[29] = a41;
+    values[30] = a5;
+    values[31] = a29;
+    values[32] = a13;
+    values[33] = a37;
+    values[34] = a21;
+    values[35] = a45;
+    values[36] = a3;
+    values[37] = a27;
+    values[38] = a11;
+    values[39] = a35;
+    values[40] = a19;
+    values[41] = a43;
+    values[42] = a7;
+    values[43] = a31;
+    values[44] = a15;
+    values[45] = a39;
+    values[46] = a23;
+    values[47] = a47;
 }
 
 /// Size 64 NTT.
@@ -820,6 +1397,748 @@ fn ntt_64(values: &mut [Field]) {
     values[61] = a47;
     values[62] = a31;
     values[63] = a63;
+}
+
+/// Size 96 NTT.
+fn ntt_96(values: &mut [Field]) {
+    debug_assert_eq!(values.len(), 96);
+    let a0 = values[0];
+    let a1 = values[1];
+    let a2 = values[2];
+    let a3 = values[3];
+    let a4 = values[4];
+    let a5 = values[5];
+    let a6 = values[6];
+    let a7 = values[7];
+    let a8 = values[8];
+    let a9 = values[9];
+    let a10 = values[10];
+    let a11 = values[11];
+    let a12 = values[12];
+    let a13 = values[13];
+    let a14 = values[14];
+    let a15 = values[15];
+    let a16 = values[16];
+    let a17 = values[17];
+    let a18 = values[18];
+    let a19 = values[19];
+    let a20 = values[20];
+    let a21 = values[21];
+    let a22 = values[22];
+    let a23 = values[23];
+    let a24 = values[24];
+    let a25 = values[25];
+    let a26 = values[26];
+    let a27 = values[27];
+    let a28 = values[28];
+    let a29 = values[29];
+    let a30 = values[30];
+    let a31 = values[31];
+    let a32 = values[32];
+    let a33 = values[33];
+    let a34 = values[34];
+    let a35 = values[35];
+    let a36 = values[36];
+    let a37 = values[37];
+    let a38 = values[38];
+    let a39 = values[39];
+    let a40 = values[40];
+    let a41 = values[41];
+    let a42 = values[42];
+    let a43 = values[43];
+    let a44 = values[44];
+    let a45 = values[45];
+    let a46 = values[46];
+    let a47 = values[47];
+    let a48 = values[48];
+    let a49 = values[49];
+    let a50 = values[50];
+    let a51 = values[51];
+    let a52 = values[52];
+    let a53 = values[53];
+    let a54 = values[54];
+    let a55 = values[55];
+    let a56 = values[56];
+    let a57 = values[57];
+    let a58 = values[58];
+    let a59 = values[59];
+    let a60 = values[60];
+    let a61 = values[61];
+    let a62 = values[62];
+    let a63 = values[63];
+    let a64 = values[64];
+    let a65 = values[65];
+    let a66 = values[66];
+    let a67 = values[67];
+    let a68 = values[68];
+    let a69 = values[69];
+    let a70 = values[70];
+    let a71 = values[71];
+    let a72 = values[72];
+    let a73 = values[73];
+    let a74 = values[74];
+    let a75 = values[75];
+    let a76 = values[76];
+    let a77 = values[77];
+    let a78 = values[78];
+    let a79 = values[79];
+    let a80 = values[80];
+    let a81 = values[81];
+    let a82 = values[82];
+    let a83 = values[83];
+    let a84 = values[84];
+    let a85 = values[85];
+    let a86 = values[86];
+    let a87 = values[87];
+    let a88 = values[88];
+    let a89 = values[89];
+    let a90 = values[90];
+    let a91 = values[91];
+    let a92 = values[92];
+    let a93 = values[93];
+    let a94 = values[94];
+    let a95 = values[95];
+    let (a0, a48) = (a0 + a48, a0 - a48);
+    let (a12, a60) = (a12 + a60, a12 - a60);
+    let (a24, a72) = (a24 + a72, a24 - a72);
+    let (a36, a84) = (a36 + a84, a36 - a84);
+    let a60 = a60.mul_root_384(48);
+    let a72 = a72.mul_root_384(96);
+    let a84 = a84.mul_root_384(144);
+    let (a0, a24) = (a0 + a24, a0 - a24);
+    let (a12, a36) = (a12 + a36, a12 - a36);
+    let a36 = a36.mul_root_384(96);
+    let (a0, a12) = (a0 + a12, a0 - a12);
+    let (a24, a36) = (a24 + a36, a24 - a36);
+    let (a48, a72) = (a48 + a72, a48 - a72);
+    let (a60, a84) = (a60 + a84, a60 - a84);
+    let a84 = a84.mul_root_384(96);
+    let (a48, a60) = (a48 + a60, a48 - a60);
+    let (a72, a84) = (a72 + a84, a72 - a84);
+    let (a1, a49) = (a1 + a49, a1 - a49);
+    let (a13, a61) = (a13 + a61, a13 - a61);
+    let (a25, a73) = (a25 + a73, a25 - a73);
+    let (a37, a85) = (a37 + a85, a37 - a85);
+    let a61 = a61.mul_root_384(48);
+    let a73 = a73.mul_root_384(96);
+    let a85 = a85.mul_root_384(144);
+    let (a1, a25) = (a1 + a25, a1 - a25);
+    let (a13, a37) = (a13 + a37, a13 - a37);
+    let a37 = a37.mul_root_384(96);
+    let (a1, a13) = (a1 + a13, a1 - a13);
+    let (a25, a37) = (a25 + a37, a25 - a37);
+    let (a49, a73) = (a49 + a73, a49 - a73);
+    let (a61, a85) = (a61 + a85, a61 - a85);
+    let a85 = a85.mul_root_384(96);
+    let (a49, a61) = (a49 + a61, a49 - a61);
+    let (a73, a85) = (a73 + a85, a73 - a85);
+    let (a2, a50) = (a2 + a50, a2 - a50);
+    let (a14, a62) = (a14 + a62, a14 - a62);
+    let (a26, a74) = (a26 + a74, a26 - a74);
+    let (a38, a86) = (a38 + a86, a38 - a86);
+    let a62 = a62.mul_root_384(48);
+    let a74 = a74.mul_root_384(96);
+    let a86 = a86.mul_root_384(144);
+    let (a2, a26) = (a2 + a26, a2 - a26);
+    let (a14, a38) = (a14 + a38, a14 - a38);
+    let a38 = a38.mul_root_384(96);
+    let (a2, a14) = (a2 + a14, a2 - a14);
+    let (a26, a38) = (a26 + a38, a26 - a38);
+    let (a50, a74) = (a50 + a74, a50 - a74);
+    let (a62, a86) = (a62 + a86, a62 - a86);
+    let a86 = a86.mul_root_384(96);
+    let (a50, a62) = (a50 + a62, a50 - a62);
+    let (a74, a86) = (a74 + a86, a74 - a86);
+    let (a3, a51) = (a3 + a51, a3 - a51);
+    let (a15, a63) = (a15 + a63, a15 - a63);
+    let (a27, a75) = (a27 + a75, a27 - a75);
+    let (a39, a87) = (a39 + a87, a39 - a87);
+    let a63 = a63.mul_root_384(48);
+    let a75 = a75.mul_root_384(96);
+    let a87 = a87.mul_root_384(144);
+    let (a3, a27) = (a3 + a27, a3 - a27);
+    let (a15, a39) = (a15 + a39, a15 - a39);
+    let a39 = a39.mul_root_384(96);
+    let (a3, a15) = (a3 + a15, a3 - a15);
+    let (a27, a39) = (a27 + a39, a27 - a39);
+    let (a51, a75) = (a51 + a75, a51 - a75);
+    let (a63, a87) = (a63 + a87, a63 - a87);
+    let a87 = a87.mul_root_384(96);
+    let (a51, a63) = (a51 + a63, a51 - a63);
+    let (a75, a87) = (a75 + a87, a75 - a87);
+    let (a4, a52) = (a4 + a52, a4 - a52);
+    let (a16, a64) = (a16 + a64, a16 - a64);
+    let (a28, a76) = (a28 + a76, a28 - a76);
+    let (a40, a88) = (a40 + a88, a40 - a88);
+    let a64 = a64.mul_root_384(48);
+    let a76 = a76.mul_root_384(96);
+    let a88 = a88.mul_root_384(144);
+    let (a4, a28) = (a4 + a28, a4 - a28);
+    let (a16, a40) = (a16 + a40, a16 - a40);
+    let a40 = a40.mul_root_384(96);
+    let (a4, a16) = (a4 + a16, a4 - a16);
+    let (a28, a40) = (a28 + a40, a28 - a40);
+    let (a52, a76) = (a52 + a76, a52 - a76);
+    let (a64, a88) = (a64 + a88, a64 - a88);
+    let a88 = a88.mul_root_384(96);
+    let (a52, a64) = (a52 + a64, a52 - a64);
+    let (a76, a88) = (a76 + a88, a76 - a88);
+    let (a5, a53) = (a5 + a53, a5 - a53);
+    let (a17, a65) = (a17 + a65, a17 - a65);
+    let (a29, a77) = (a29 + a77, a29 - a77);
+    let (a41, a89) = (a41 + a89, a41 - a89);
+    let a65 = a65.mul_root_384(48);
+    let a77 = a77.mul_root_384(96);
+    let a89 = a89.mul_root_384(144);
+    let (a5, a29) = (a5 + a29, a5 - a29);
+    let (a17, a41) = (a17 + a41, a17 - a41);
+    let a41 = a41.mul_root_384(96);
+    let (a5, a17) = (a5 + a17, a5 - a17);
+    let (a29, a41) = (a29 + a41, a29 - a41);
+    let (a53, a77) = (a53 + a77, a53 - a77);
+    let (a65, a89) = (a65 + a89, a65 - a89);
+    let a89 = a89.mul_root_384(96);
+    let (a53, a65) = (a53 + a65, a53 - a65);
+    let (a77, a89) = (a77 + a89, a77 - a89);
+    let (a6, a54) = (a6 + a54, a6 - a54);
+    let (a18, a66) = (a18 + a66, a18 - a66);
+    let (a30, a78) = (a30 + a78, a30 - a78);
+    let (a42, a90) = (a42 + a90, a42 - a90);
+    let a66 = a66.mul_root_384(48);
+    let a78 = a78.mul_root_384(96);
+    let a90 = a90.mul_root_384(144);
+    let (a6, a30) = (a6 + a30, a6 - a30);
+    let (a18, a42) = (a18 + a42, a18 - a42);
+    let a42 = a42.mul_root_384(96);
+    let (a6, a18) = (a6 + a18, a6 - a18);
+    let (a30, a42) = (a30 + a42, a30 - a42);
+    let (a54, a78) = (a54 + a78, a54 - a78);
+    let (a66, a90) = (a66 + a90, a66 - a90);
+    let a90 = a90.mul_root_384(96);
+    let (a54, a66) = (a54 + a66, a54 - a66);
+    let (a78, a90) = (a78 + a90, a78 - a90);
+    let (a7, a55) = (a7 + a55, a7 - a55);
+    let (a19, a67) = (a19 + a67, a19 - a67);
+    let (a31, a79) = (a31 + a79, a31 - a79);
+    let (a43, a91) = (a43 + a91, a43 - a91);
+    let a67 = a67.mul_root_384(48);
+    let a79 = a79.mul_root_384(96);
+    let a91 = a91.mul_root_384(144);
+    let (a7, a31) = (a7 + a31, a7 - a31);
+    let (a19, a43) = (a19 + a43, a19 - a43);
+    let a43 = a43.mul_root_384(96);
+    let (a7, a19) = (a7 + a19, a7 - a19);
+    let (a31, a43) = (a31 + a43, a31 - a43);
+    let (a55, a79) = (a55 + a79, a55 - a79);
+    let (a67, a91) = (a67 + a91, a67 - a91);
+    let a91 = a91.mul_root_384(96);
+    let (a55, a67) = (a55 + a67, a55 - a67);
+    let (a79, a91) = (a79 + a91, a79 - a91);
+    let (a8, a56) = (a8 + a56, a8 - a56);
+    let (a20, a68) = (a20 + a68, a20 - a68);
+    let (a32, a80) = (a32 + a80, a32 - a80);
+    let (a44, a92) = (a44 + a92, a44 - a92);
+    let a68 = a68.mul_root_384(48);
+    let a80 = a80.mul_root_384(96);
+    let a92 = a92.mul_root_384(144);
+    let (a8, a32) = (a8 + a32, a8 - a32);
+    let (a20, a44) = (a20 + a44, a20 - a44);
+    let a44 = a44.mul_root_384(96);
+    let (a8, a20) = (a8 + a20, a8 - a20);
+    let (a32, a44) = (a32 + a44, a32 - a44);
+    let (a56, a80) = (a56 + a80, a56 - a80);
+    let (a68, a92) = (a68 + a92, a68 - a92);
+    let a92 = a92.mul_root_384(96);
+    let (a56, a68) = (a56 + a68, a56 - a68);
+    let (a80, a92) = (a80 + a92, a80 - a92);
+    let (a9, a57) = (a9 + a57, a9 - a57);
+    let (a21, a69) = (a21 + a69, a21 - a69);
+    let (a33, a81) = (a33 + a81, a33 - a81);
+    let (a45, a93) = (a45 + a93, a45 - a93);
+    let a69 = a69.mul_root_384(48);
+    let a81 = a81.mul_root_384(96);
+    let a93 = a93.mul_root_384(144);
+    let (a9, a33) = (a9 + a33, a9 - a33);
+    let (a21, a45) = (a21 + a45, a21 - a45);
+    let a45 = a45.mul_root_384(96);
+    let (a9, a21) = (a9 + a21, a9 - a21);
+    let (a33, a45) = (a33 + a45, a33 - a45);
+    let (a57, a81) = (a57 + a81, a57 - a81);
+    let (a69, a93) = (a69 + a93, a69 - a93);
+    let a93 = a93.mul_root_384(96);
+    let (a57, a69) = (a57 + a69, a57 - a69);
+    let (a81, a93) = (a81 + a93, a81 - a93);
+    let (a10, a58) = (a10 + a58, a10 - a58);
+    let (a22, a70) = (a22 + a70, a22 - a70);
+    let (a34, a82) = (a34 + a82, a34 - a82);
+    let (a46, a94) = (a46 + a94, a46 - a94);
+    let a70 = a70.mul_root_384(48);
+    let a82 = a82.mul_root_384(96);
+    let a94 = a94.mul_root_384(144);
+    let (a10, a34) = (a10 + a34, a10 - a34);
+    let (a22, a46) = (a22 + a46, a22 - a46);
+    let a46 = a46.mul_root_384(96);
+    let (a10, a22) = (a10 + a22, a10 - a22);
+    let (a34, a46) = (a34 + a46, a34 - a46);
+    let (a58, a82) = (a58 + a82, a58 - a82);
+    let (a70, a94) = (a70 + a94, a70 - a94);
+    let a94 = a94.mul_root_384(96);
+    let (a58, a70) = (a58 + a70, a58 - a70);
+    let (a82, a94) = (a82 + a94, a82 - a94);
+    let (a11, a59) = (a11 + a59, a11 - a59);
+    let (a23, a71) = (a23 + a71, a23 - a71);
+    let (a35, a83) = (a35 + a83, a35 - a83);
+    let (a47, a95) = (a47 + a95, a47 - a95);
+    let a71 = a71.mul_root_384(48);
+    let a83 = a83.mul_root_384(96);
+    let a95 = a95.mul_root_384(144);
+    let (a11, a35) = (a11 + a35, a11 - a35);
+    let (a23, a47) = (a23 + a47, a23 - a47);
+    let a47 = a47.mul_root_384(96);
+    let (a11, a23) = (a11 + a23, a11 - a23);
+    let (a35, a47) = (a35 + a47, a35 - a47);
+    let (a59, a83) = (a59 + a83, a59 - a83);
+    let (a71, a95) = (a71 + a95, a71 - a95);
+    let a95 = a95.mul_root_384(96);
+    let (a59, a71) = (a59 + a71, a59 - a71);
+    let (a83, a95) = (a83 + a95, a83 - a95);
+    let a49 = a49.mul_root_384(4);
+    let a25 = a25.mul_root_384(8);
+    let a73 = a73.mul_root_384(12);
+    let a13 = a13.mul_root_384(16);
+    let a61 = a61.mul_root_384(20);
+    let a37 = a37.mul_root_384(24);
+    let a85 = a85.mul_root_384(28);
+    let a50 = a50.mul_root_384(8);
+    let a26 = a26.mul_root_384(16);
+    let a74 = a74.mul_root_384(24);
+    let a14 = a14.mul_root_384(32);
+    let a62 = a62.mul_root_384(40);
+    let a38 = a38.mul_root_384(48);
+    let a86 = a86.mul_root_384(56);
+    let a51 = a51.mul_root_384(12);
+    let a27 = a27.mul_root_384(24);
+    let a75 = a75.mul_root_384(36);
+    let a15 = a15.mul_root_384(48);
+    let a63 = a63.mul_root_384(60);
+    let a39 = a39.mul_root_384(72);
+    let a87 = a87.mul_root_384(84);
+    let a52 = a52.mul_root_384(16);
+    let a28 = a28.mul_root_384(32);
+    let a76 = a76.mul_root_384(48);
+    let a16 = a16.mul_root_384(64);
+    let a64 = a64.mul_root_384(80);
+    let a40 = a40.mul_root_384(96);
+    let a88 = a88.mul_root_384(112);
+    let a53 = a53.mul_root_384(20);
+    let a29 = a29.mul_root_384(40);
+    let a77 = a77.mul_root_384(60);
+    let a17 = a17.mul_root_384(80);
+    let a65 = a65.mul_root_384(100);
+    let a41 = a41.mul_root_384(120);
+    let a89 = a89.mul_root_384(140);
+    let a54 = a54.mul_root_384(24);
+    let a30 = a30.mul_root_384(48);
+    let a78 = a78.mul_root_384(72);
+    let a18 = a18.mul_root_384(96);
+    let a66 = a66.mul_root_384(120);
+    let a42 = a42.mul_root_384(144);
+    let a90 = a90.mul_root_384(168);
+    let a55 = a55.mul_root_384(28);
+    let a31 = a31.mul_root_384(56);
+    let a79 = a79.mul_root_384(84);
+    let a19 = a19.mul_root_384(112);
+    let a67 = a67.mul_root_384(140);
+    let a43 = a43.mul_root_384(168);
+    let a91 = a91.mul_root_384(196);
+    let a56 = a56.mul_root_384(32);
+    let a32 = a32.mul_root_384(64);
+    let a80 = a80.mul_root_384(96);
+    let a20 = a20.mul_root_384(128);
+    let a68 = a68.mul_root_384(160);
+    let a44 = a44.mul_root_384(192);
+    let a92 = a92.mul_root_384(224);
+    let a57 = a57.mul_root_384(36);
+    let a33 = a33.mul_root_384(72);
+    let a81 = a81.mul_root_384(108);
+    let a21 = a21.mul_root_384(144);
+    let a69 = a69.mul_root_384(180);
+    let a45 = a45.mul_root_384(216);
+    let a93 = a93.mul_root_384(252);
+    let a58 = a58.mul_root_384(40);
+    let a34 = a34.mul_root_384(80);
+    let a82 = a82.mul_root_384(120);
+    let a22 = a22.mul_root_384(160);
+    let a70 = a70.mul_root_384(200);
+    let a46 = a46.mul_root_384(240);
+    let a94 = a94.mul_root_384(280);
+    let a59 = a59.mul_root_384(44);
+    let a35 = a35.mul_root_384(88);
+    let a83 = a83.mul_root_384(132);
+    let a23 = a23.mul_root_384(176);
+    let a71 = a71.mul_root_384(220);
+    let a47 = a47.mul_root_384(264);
+    let a95 = a95.mul_root_384(308);
+    let (a0, a4, a8) = (a0 + a4 + a8,
+        a0 + a4.mul_root_384(128) + a8.mul_root_384(256),
+        a0 + a4.mul_root_384(256) + a8.mul_root_384(128));
+    let (a1, a5, a9) = (a1 + a5 + a9,
+        a1 + a5.mul_root_384(128) + a9.mul_root_384(256),
+        a1 + a5.mul_root_384(256) + a9.mul_root_384(128));
+    let (a2, a6, a10) = (a2 + a6 + a10,
+        a2 + a6.mul_root_384(128) + a10.mul_root_384(256),
+        a2 + a6.mul_root_384(256) + a10.mul_root_384(128));
+    let (a3, a7, a11) = (a3 + a7 + a11,
+        a3 + a7.mul_root_384(128) + a11.mul_root_384(256),
+        a3 + a7.mul_root_384(256) + a11.mul_root_384(128));
+    let a5 = a5.mul_root_384(32);
+    let a9 = a9.mul_root_384(64);
+    let a6 = a6.mul_root_384(64);
+    let a10 = a10.mul_root_384(128);
+    let a7 = a7.mul_root_384(96);
+    let a11 = a11.mul_root_384(192);
+    let (a0, a2) = (a0 + a2, a0 - a2);
+    let (a1, a3) = (a1 + a3, a1 - a3);
+    let a3 = a3.mul_root_384(96);
+    let (a0, a1) = (a0 + a1, a0 - a1);
+    let (a2, a3) = (a2 + a3, a2 - a3);
+    let (a4, a6) = (a4 + a6, a4 - a6);
+    let (a5, a7) = (a5 + a7, a5 - a7);
+    let a7 = a7.mul_root_384(96);
+    let (a4, a5) = (a4 + a5, a4 - a5);
+    let (a6, a7) = (a6 + a7, a6 - a7);
+    let (a8, a10) = (a8 + a10, a8 - a10);
+    let (a9, a11) = (a9 + a11, a9 - a11);
+    let a11 = a11.mul_root_384(96);
+    let (a8, a9) = (a8 + a9, a8 - a9);
+    let (a10, a11) = (a10 + a11, a10 - a11);
+    let (a48, a52, a56) = (a48 + a52 + a56,
+        a48 + a52.mul_root_384(128) + a56.mul_root_384(256),
+        a48 + a52.mul_root_384(256) + a56.mul_root_384(128));
+    let (a49, a53, a57) = (a49 + a53 + a57,
+        a49 + a53.mul_root_384(128) + a57.mul_root_384(256),
+        a49 + a53.mul_root_384(256) + a57.mul_root_384(128));
+    let (a50, a54, a58) = (a50 + a54 + a58,
+        a50 + a54.mul_root_384(128) + a58.mul_root_384(256),
+        a50 + a54.mul_root_384(256) + a58.mul_root_384(128));
+    let (a51, a55, a59) = (a51 + a55 + a59,
+        a51 + a55.mul_root_384(128) + a59.mul_root_384(256),
+        a51 + a55.mul_root_384(256) + a59.mul_root_384(128));
+    let a53 = a53.mul_root_384(32);
+    let a57 = a57.mul_root_384(64);
+    let a54 = a54.mul_root_384(64);
+    let a58 = a58.mul_root_384(128);
+    let a55 = a55.mul_root_384(96);
+    let a59 = a59.mul_root_384(192);
+    let (a48, a50) = (a48 + a50, a48 - a50);
+    let (a49, a51) = (a49 + a51, a49 - a51);
+    let a51 = a51.mul_root_384(96);
+    let (a48, a49) = (a48 + a49, a48 - a49);
+    let (a50, a51) = (a50 + a51, a50 - a51);
+    let (a52, a54) = (a52 + a54, a52 - a54);
+    let (a53, a55) = (a53 + a55, a53 - a55);
+    let a55 = a55.mul_root_384(96);
+    let (a52, a53) = (a52 + a53, a52 - a53);
+    let (a54, a55) = (a54 + a55, a54 - a55);
+    let (a56, a58) = (a56 + a58, a56 - a58);
+    let (a57, a59) = (a57 + a59, a57 - a59);
+    let a59 = a59.mul_root_384(96);
+    let (a56, a57) = (a56 + a57, a56 - a57);
+    let (a58, a59) = (a58 + a59, a58 - a59);
+    let (a24, a28, a32) = (a24 + a28 + a32,
+        a24 + a28.mul_root_384(128) + a32.mul_root_384(256),
+        a24 + a28.mul_root_384(256) + a32.mul_root_384(128));
+    let (a25, a29, a33) = (a25 + a29 + a33,
+        a25 + a29.mul_root_384(128) + a33.mul_root_384(256),
+        a25 + a29.mul_root_384(256) + a33.mul_root_384(128));
+    let (a26, a30, a34) = (a26 + a30 + a34,
+        a26 + a30.mul_root_384(128) + a34.mul_root_384(256),
+        a26 + a30.mul_root_384(256) + a34.mul_root_384(128));
+    let (a27, a31, a35) = (a27 + a31 + a35,
+        a27 + a31.mul_root_384(128) + a35.mul_root_384(256),
+        a27 + a31.mul_root_384(256) + a35.mul_root_384(128));
+    let a29 = a29.mul_root_384(32);
+    let a33 = a33.mul_root_384(64);
+    let a30 = a30.mul_root_384(64);
+    let a34 = a34.mul_root_384(128);
+    let a31 = a31.mul_root_384(96);
+    let a35 = a35.mul_root_384(192);
+    let (a24, a26) = (a24 + a26, a24 - a26);
+    let (a25, a27) = (a25 + a27, a25 - a27);
+    let a27 = a27.mul_root_384(96);
+    let (a24, a25) = (a24 + a25, a24 - a25);
+    let (a26, a27) = (a26 + a27, a26 - a27);
+    let (a28, a30) = (a28 + a30, a28 - a30);
+    let (a29, a31) = (a29 + a31, a29 - a31);
+    let a31 = a31.mul_root_384(96);
+    let (a28, a29) = (a28 + a29, a28 - a29);
+    let (a30, a31) = (a30 + a31, a30 - a31);
+    let (a32, a34) = (a32 + a34, a32 - a34);
+    let (a33, a35) = (a33 + a35, a33 - a35);
+    let a35 = a35.mul_root_384(96);
+    let (a32, a33) = (a32 + a33, a32 - a33);
+    let (a34, a35) = (a34 + a35, a34 - a35);
+    let (a72, a76, a80) = (a72 + a76 + a80,
+        a72 + a76.mul_root_384(128) + a80.mul_root_384(256),
+        a72 + a76.mul_root_384(256) + a80.mul_root_384(128));
+    let (a73, a77, a81) = (a73 + a77 + a81,
+        a73 + a77.mul_root_384(128) + a81.mul_root_384(256),
+        a73 + a77.mul_root_384(256) + a81.mul_root_384(128));
+    let (a74, a78, a82) = (a74 + a78 + a82,
+        a74 + a78.mul_root_384(128) + a82.mul_root_384(256),
+        a74 + a78.mul_root_384(256) + a82.mul_root_384(128));
+    let (a75, a79, a83) = (a75 + a79 + a83,
+        a75 + a79.mul_root_384(128) + a83.mul_root_384(256),
+        a75 + a79.mul_root_384(256) + a83.mul_root_384(128));
+    let a77 = a77.mul_root_384(32);
+    let a81 = a81.mul_root_384(64);
+    let a78 = a78.mul_root_384(64);
+    let a82 = a82.mul_root_384(128);
+    let a79 = a79.mul_root_384(96);
+    let a83 = a83.mul_root_384(192);
+    let (a72, a74) = (a72 + a74, a72 - a74);
+    let (a73, a75) = (a73 + a75, a73 - a75);
+    let a75 = a75.mul_root_384(96);
+    let (a72, a73) = (a72 + a73, a72 - a73);
+    let (a74, a75) = (a74 + a75, a74 - a75);
+    let (a76, a78) = (a76 + a78, a76 - a78);
+    let (a77, a79) = (a77 + a79, a77 - a79);
+    let a79 = a79.mul_root_384(96);
+    let (a76, a77) = (a76 + a77, a76 - a77);
+    let (a78, a79) = (a78 + a79, a78 - a79);
+    let (a80, a82) = (a80 + a82, a80 - a82);
+    let (a81, a83) = (a81 + a83, a81 - a83);
+    let a83 = a83.mul_root_384(96);
+    let (a80, a81) = (a80 + a81, a80 - a81);
+    let (a82, a83) = (a82 + a83, a82 - a83);
+    let (a12, a16, a20) = (a12 + a16 + a20,
+        a12 + a16.mul_root_384(128) + a20.mul_root_384(256),
+        a12 + a16.mul_root_384(256) + a20.mul_root_384(128));
+    let (a13, a17, a21) = (a13 + a17 + a21,
+        a13 + a17.mul_root_384(128) + a21.mul_root_384(256),
+        a13 + a17.mul_root_384(256) + a21.mul_root_384(128));
+    let (a14, a18, a22) = (a14 + a18 + a22,
+        a14 + a18.mul_root_384(128) + a22.mul_root_384(256),
+        a14 + a18.mul_root_384(256) + a22.mul_root_384(128));
+    let (a15, a19, a23) = (a15 + a19 + a23,
+        a15 + a19.mul_root_384(128) + a23.mul_root_384(256),
+        a15 + a19.mul_root_384(256) + a23.mul_root_384(128));
+    let a17 = a17.mul_root_384(32);
+    let a21 = a21.mul_root_384(64);
+    let a18 = a18.mul_root_384(64);
+    let a22 = a22.mul_root_384(128);
+    let a19 = a19.mul_root_384(96);
+    let a23 = a23.mul_root_384(192);
+    let (a12, a14) = (a12 + a14, a12 - a14);
+    let (a13, a15) = (a13 + a15, a13 - a15);
+    let a15 = a15.mul_root_384(96);
+    let (a12, a13) = (a12 + a13, a12 - a13);
+    let (a14, a15) = (a14 + a15, a14 - a15);
+    let (a16, a18) = (a16 + a18, a16 - a18);
+    let (a17, a19) = (a17 + a19, a17 - a19);
+    let a19 = a19.mul_root_384(96);
+    let (a16, a17) = (a16 + a17, a16 - a17);
+    let (a18, a19) = (a18 + a19, a18 - a19);
+    let (a20, a22) = (a20 + a22, a20 - a22);
+    let (a21, a23) = (a21 + a23, a21 - a23);
+    let a23 = a23.mul_root_384(96);
+    let (a20, a21) = (a20 + a21, a20 - a21);
+    let (a22, a23) = (a22 + a23, a22 - a23);
+    let (a60, a64, a68) = (a60 + a64 + a68,
+        a60 + a64.mul_root_384(128) + a68.mul_root_384(256),
+        a60 + a64.mul_root_384(256) + a68.mul_root_384(128));
+    let (a61, a65, a69) = (a61 + a65 + a69,
+        a61 + a65.mul_root_384(128) + a69.mul_root_384(256),
+        a61 + a65.mul_root_384(256) + a69.mul_root_384(128));
+    let (a62, a66, a70) = (a62 + a66 + a70,
+        a62 + a66.mul_root_384(128) + a70.mul_root_384(256),
+        a62 + a66.mul_root_384(256) + a70.mul_root_384(128));
+    let (a63, a67, a71) = (a63 + a67 + a71,
+        a63 + a67.mul_root_384(128) + a71.mul_root_384(256),
+        a63 + a67.mul_root_384(256) + a71.mul_root_384(128));
+    let a65 = a65.mul_root_384(32);
+    let a69 = a69.mul_root_384(64);
+    let a66 = a66.mul_root_384(64);
+    let a70 = a70.mul_root_384(128);
+    let a67 = a67.mul_root_384(96);
+    let a71 = a71.mul_root_384(192);
+    let (a60, a62) = (a60 + a62, a60 - a62);
+    let (a61, a63) = (a61 + a63, a61 - a63);
+    let a63 = a63.mul_root_384(96);
+    let (a60, a61) = (a60 + a61, a60 - a61);
+    let (a62, a63) = (a62 + a63, a62 - a63);
+    let (a64, a66) = (a64 + a66, a64 - a66);
+    let (a65, a67) = (a65 + a67, a65 - a67);
+    let a67 = a67.mul_root_384(96);
+    let (a64, a65) = (a64 + a65, a64 - a65);
+    let (a66, a67) = (a66 + a67, a66 - a67);
+    let (a68, a70) = (a68 + a70, a68 - a70);
+    let (a69, a71) = (a69 + a71, a69 - a71);
+    let a71 = a71.mul_root_384(96);
+    let (a68, a69) = (a68 + a69, a68 - a69);
+    let (a70, a71) = (a70 + a71, a70 - a71);
+    let (a36, a40, a44) = (a36 + a40 + a44,
+        a36 + a40.mul_root_384(128) + a44.mul_root_384(256),
+        a36 + a40.mul_root_384(256) + a44.mul_root_384(128));
+    let (a37, a41, a45) = (a37 + a41 + a45,
+        a37 + a41.mul_root_384(128) + a45.mul_root_384(256),
+        a37 + a41.mul_root_384(256) + a45.mul_root_384(128));
+    let (a38, a42, a46) = (a38 + a42 + a46,
+        a38 + a42.mul_root_384(128) + a46.mul_root_384(256),
+        a38 + a42.mul_root_384(256) + a46.mul_root_384(128));
+    let (a39, a43, a47) = (a39 + a43 + a47,
+        a39 + a43.mul_root_384(128) + a47.mul_root_384(256),
+        a39 + a43.mul_root_384(256) + a47.mul_root_384(128));
+    let a41 = a41.mul_root_384(32);
+    let a45 = a45.mul_root_384(64);
+    let a42 = a42.mul_root_384(64);
+    let a46 = a46.mul_root_384(128);
+    let a43 = a43.mul_root_384(96);
+    let a47 = a47.mul_root_384(192);
+    let (a36, a38) = (a36 + a38, a36 - a38);
+    let (a37, a39) = (a37 + a39, a37 - a39);
+    let a39 = a39.mul_root_384(96);
+    let (a36, a37) = (a36 + a37, a36 - a37);
+    let (a38, a39) = (a38 + a39, a38 - a39);
+    let (a40, a42) = (a40 + a42, a40 - a42);
+    let (a41, a43) = (a41 + a43, a41 - a43);
+    let a43 = a43.mul_root_384(96);
+    let (a40, a41) = (a40 + a41, a40 - a41);
+    let (a42, a43) = (a42 + a43, a42 - a43);
+    let (a44, a46) = (a44 + a46, a44 - a46);
+    let (a45, a47) = (a45 + a47, a45 - a47);
+    let a47 = a47.mul_root_384(96);
+    let (a44, a45) = (a44 + a45, a44 - a45);
+    let (a46, a47) = (a46 + a47, a46 - a47);
+    let (a84, a88, a92) = (a84 + a88 + a92,
+        a84 + a88.mul_root_384(128) + a92.mul_root_384(256),
+        a84 + a88.mul_root_384(256) + a92.mul_root_384(128));
+    let (a85, a89, a93) = (a85 + a89 + a93,
+        a85 + a89.mul_root_384(128) + a93.mul_root_384(256),
+        a85 + a89.mul_root_384(256) + a93.mul_root_384(128));
+    let (a86, a90, a94) = (a86 + a90 + a94,
+        a86 + a90.mul_root_384(128) + a94.mul_root_384(256),
+        a86 + a90.mul_root_384(256) + a94.mul_root_384(128));
+    let (a87, a91, a95) = (a87 + a91 + a95,
+        a87 + a91.mul_root_384(128) + a95.mul_root_384(256),
+        a87 + a91.mul_root_384(256) + a95.mul_root_384(128));
+    let a89 = a89.mul_root_384(32);
+    let a93 = a93.mul_root_384(64);
+    let a90 = a90.mul_root_384(64);
+    let a94 = a94.mul_root_384(128);
+    let a91 = a91.mul_root_384(96);
+    let a95 = a95.mul_root_384(192);
+    let (a84, a86) = (a84 + a86, a84 - a86);
+    let (a85, a87) = (a85 + a87, a85 - a87);
+    let a87 = a87.mul_root_384(96);
+    let (a84, a85) = (a84 + a85, a84 - a85);
+    let (a86, a87) = (a86 + a87, a86 - a87);
+    let (a88, a90) = (a88 + a90, a88 - a90);
+    let (a89, a91) = (a89 + a91, a89 - a91);
+    let a91 = a91.mul_root_384(96);
+    let (a88, a89) = (a88 + a89, a88 - a89);
+    let (a90, a91) = (a90 + a91, a90 - a91);
+    let (a92, a94) = (a92 + a94, a92 - a94);
+    let (a93, a95) = (a93 + a95, a93 - a95);
+    let a95 = a95.mul_root_384(96);
+    let (a92, a93) = (a92 + a93, a92 - a93);
+    let (a94, a95) = (a94 + a95, a94 - a95);
+    values[0] = a0;
+    values[1] = a48;
+    values[2] = a24;
+    values[3] = a72;
+    values[4] = a12;
+    values[5] = a60;
+    values[6] = a36;
+    values[7] = a84;
+    values[8] = a4;
+    values[9] = a52;
+    values[10] = a28;
+    values[11] = a76;
+    values[12] = a16;
+    values[13] = a64;
+    values[14] = a40;
+    values[15] = a88;
+    values[16] = a8;
+    values[17] = a56;
+    values[18] = a32;
+    values[19] = a80;
+    values[20] = a20;
+    values[21] = a68;
+    values[22] = a44;
+    values[23] = a92;
+    values[24] = a2;
+    values[25] = a50;
+    values[26] = a26;
+    values[27] = a74;
+    values[28] = a14;
+    values[29] = a62;
+    values[30] = a38;
+    values[31] = a86;
+    values[32] = a6;
+    values[33] = a54;
+    values[34] = a30;
+    values[35] = a78;
+    values[36] = a18;
+    values[37] = a66;
+    values[38] = a42;
+    values[39] = a90;
+    values[40] = a10;
+    values[41] = a58;
+    values[42] = a34;
+    values[43] = a82;
+    values[44] = a22;
+    values[45] = a70;
+    values[46] = a46;
+    values[47] = a94;
+    values[48] = a1;
+    values[49] = a49;
+    values[50] = a25;
+    values[51] = a73;
+    values[52] = a13;
+    values[53] = a61;
+    values[54] = a37;
+    values[55] = a85;
+    values[56] = a5;
+    values[57] = a53;
+    values[58] = a29;
+    values[59] = a77;
+    values[60] = a17;
+    values[61] = a65;
+    values[62] = a41;
+    values[63] = a89;
+    values[64] = a9;
+    values[65] = a57;
+    values[66] = a33;
+    values[67] = a81;
+    values[68] = a21;
+    values[69] = a69;
+    values[70] = a45;
+    values[71] = a93;
+    values[72] = a3;
+    values[73] = a51;
+    values[74] = a27;
+    values[75] = a75;
+    values[76] = a15;
+    values[77] = a63;
+    values[78] = a39;
+    values[79] = a87;
+    values[80] = a7;
+    values[81] = a55;
+    values[82] = a31;
+    values[83] = a79;
+    values[84] = a19;
+    values[85] = a67;
+    values[86] = a43;
+    values[87] = a91;
+    values[88] = a11;
+    values[89] = a59;
+    values[90] = a35;
+    values[91] = a83;
+    values[92] = a23;
+    values[93] = a71;
+    values[94] = a47;
+    values[95] = a95;
 }
 
 /// Size 128 NTT.
@@ -1858,7 +3177,7 @@ mod tests {
 
     #[test]
     fn test_small_ntt() {
-        for size in [0, 1, 2, 4, 8, 16, 32, 64, 128] {
+        for size in [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128] {
             let input = (0..size).map(Field::from).collect::<Vec<_>>();
             let mut output = input.clone();
             let supported = small_ntt(output.as_mut_slice());
@@ -1868,6 +3187,7 @@ mod tests {
             assert_eq!(output, output_ref);
         }
     }
+
 
     #[test]
     fn test_ntt_2() {
@@ -1880,6 +3200,19 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
+
+    #[test]
+    fn test_ntt_3() {
+        let size = 3;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_3(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
     #[test]
     fn test_ntt_4() {
         let size = 4;
@@ -1890,6 +3223,19 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
+
+
+    #[test]
+    fn test_ntt_6() {
+        let size = 6;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_6(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
 
     #[test]
     fn test_ntt_8() {
@@ -1902,6 +3248,19 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
+
+    #[test]
+    fn test_ntt_12() {
+        let size = 12;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_12(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
     #[test]
     fn test_ntt_16() {
         let size = 16;
@@ -1912,6 +3271,19 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
+
+
+    #[test]
+    fn test_ntt_24() {
+        let size = 24;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_24(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
 
     #[test]
     fn test_ntt_32() {
@@ -1924,6 +3296,19 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
+
+    #[test]
+    fn test_ntt_48() {
+        let size = 48;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_48(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
     #[test]
     fn test_ntt_64() {
         let size = 64;
@@ -1935,6 +3320,19 @@ mod tests {
         assert_eq!(output, output_ref);
     }
 
+
+    #[test]
+    fn test_ntt_96() {
+        let size = 96;
+        let input = (0..size).map(Field::from).collect::<Vec<_>>();
+        let mut output = input.clone();
+        ntt_96(output.as_mut_slice());
+        let mut output_ref = input;
+        ntt_naive(output_ref.as_mut_slice());
+        assert_eq!(output, output_ref);
+    }
+
+
     #[test]
     fn test_ntt_128() {
         let size = 128;
@@ -1945,4 +3343,5 @@ mod tests {
         ntt_naive(output_ref.as_mut_slice());
         assert_eq!(output, output_ref);
     }
+
 }

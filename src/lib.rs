@@ -20,7 +20,7 @@ pub mod ntt;
 pub mod ntt_old;
 pub mod permute;
 mod rand;
-mod utils;
+pub mod utils;
 
 pub use field::Field;
 

@@ -1,4 +1,4 @@
-use goldilocks_ntt::{divisors::split, permute::transpose_copy};
+use goldilocks_ntt::{Field, divisors::{divisors, split, is_smooth}, permute::transpose_copy, utils::gcd};
 
 pub fn generate(size: usize) {
     println!(
@@ -18,10 +18,13 @@ fn ntt_{size}(values: &mut [Field]) {{
     fn recurse(vars: &mut [&str]) {
         let n = vars.len();
         if n == 2 {
-            for vars in vars.chunks_exact(2) {
-                let [a, b] = vars else { unreachable!() };
-                println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
-            }
+            let [a, b] = vars else { unreachable!() };
+            println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
+        } else if n == 3 {
+            let [a, b, c] = vars else { unreachable!() };
+            println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
+            println!("        {a} + {b}.mul_root_384(128) + {c}.mul_root_384(256),");
+            println!("        {a} + {b}.mul_root_384(256) + {c}.mul_root_384(128));");
         } else {
             let a = split(n);
             let b = n / a;
@@ -33,9 +36,18 @@ fn ntt_{size}(values: &mut [Field]) {{
             vars.chunks_exact_mut(a).for_each(recurse);
             for i in 1..b {
                 for j in 1..a {
-                    let exp = (i * j) * 384 / n;
                     let var = vars[i * a + j];
-                    println!("    let {var} = {var}.mul_root_384({exp});")
+                    let exp = i * j;
+                    let order = n;
+                    let g = gcd(exp, order);
+                    let (exp, order) = (exp / g, order / g);
+                    if 384 % order == 0 {
+                        let exp = exp * 384 / order;
+                        println!("    let {var} = {var}.mul_root_384({exp});")
+                    } else {
+                        let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
+                        println!("    let {var} = {var} * Field::from({omega}_u64);")
+                    }
                 }
             }
             transpose_copy(vars, (b, a));
@@ -55,7 +67,7 @@ fn ntt_{size}(values: &mut [Field]) {{
 }
 
 fn main() {
-    let sizes = [2, 4, 8, 16, 32, 64, 128];
+    let sizes = divisors().iter().map(|n| *n as usize).filter(|&s| is_smooth(s) && s >= 2 && s <= 128).filter(|n| n % 5 != 0).collect::<Vec<_>>();
 
     // Generate header and dispatch function
     println!(
@@ -68,7 +80,7 @@ pub fn small_ntt(values: &mut [Field]) -> bool {
     match values.len() {
         ..=1 => return true,"#
     );
-    for s in sizes {
+    for s in &sizes {
         println!("        {s} => ntt_{s}(values),");
     }
     println!(
@@ -81,7 +93,7 @@ pub fn small_ntt(values: &mut [Field]) -> bool {
     );
 
     // Generate the NTTs
-    for s in sizes {
+    for &s in &sizes {
         generate(s);
     }
 
