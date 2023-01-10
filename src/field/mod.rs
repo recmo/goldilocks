@@ -17,6 +17,11 @@ impl Field {
 }
 
 impl Field {
+    pub const fn new(value: u64) -> Self {
+        assert!(value < Self::MODULUS);
+        Self(value)
+    }
+
     /// Inverse of the field element, or zero.
     #[inline(always)]
     #[must_use]

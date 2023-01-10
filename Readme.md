@@ -1,9 +1,9 @@
 # Goldilocks-NTT
 
-##
+## To do
 
 * [ ] Transpose for {1, 3} × 2^k.
-
+* Look into Rader FFT to turn prime sized FFTs into (p - 1) sized.
 
 ## Build run test bench
 

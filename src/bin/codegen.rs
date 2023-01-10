@@ -44,6 +44,13 @@ fn ntt_{size}(values: &mut [Field]) {{
             println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
             println!("        {a} + ({b} << 64) - ({c} << 32),");
             println!("        {a} - ({b} << 32) + ({c} << 64));");
+        } else if n == 5 {
+            let [a, b, c, d, e] = vars else { unreachable!() };
+            println!("    let ({a}, {b}, {c}, {d}, {e}) = ({a} + {b} + {c} + {d} + {e},");
+            println!("        {a} + {b} * R51 + {c} * R52 + {d} * R53 + {e} * R54,");
+            println!("        {a} + {b} * R52 + {c} * R54 + {d} * R51 + {e} * R53,");
+            println!("        {a} + {b} * R53 + {c} * R51 + {d} * R54 + {e} * R52,");
+            println!("        {a} + {b} * R54 + {c} * R53 + {d} * R52 + {e} * R51);");
         } else {
             let a = split(n);
             let b = n / a;
@@ -65,7 +72,7 @@ fn ntt_{size}(values: &mut [Field]) {{
                         println!("    let {var} = {};", mul_root_384(var, exp));
                     } else {
                         let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
-                        println!("    let {var} = {var} * Field::from({omega}_u64);")
+                        println!("    let {var} = {var} * Field::new({omega});")
                     }
                 }
             }
@@ -86,7 +93,7 @@ fn ntt_{size}(values: &mut [Field]) {{
 }
 
 fn main() {
-    let sizes = divisors().iter().map(|n| *n as usize).filter(|&s| is_smooth(s) && s >= 2 && s <= 128).filter(|n| n % 5 != 0).collect::<Vec<_>>();
+    let sizes = divisors().iter().map(|n| *n as usize).filter(|&s| is_smooth(s) && s >= 2 && s <= 256).collect::<Vec<_>>();
 
     // Generate header and dispatch function
     println!(
@@ -94,6 +101,11 @@ fn main() {
         r#"//! Generated using `cargo run --bin codegen`
 #![allow(unused_parens)] // Makes codegen easier
 use crate::Field;
+
+const R51: Field = Field::new(0x0e736627a0aeb983);
+const R52: Field = Field::new(0xdb8edc802dc0b266);
+const R53: Field = Field::new(0x02efb5c2a6f35241);
+const R54: Field = Field::new(0x130e07948a9d41d6);
 
 /// Apply a small NTT to `values`, or return `false` if the size is not supported.
 pub fn small_ntt(values: &mut [Field]) -> bool {
