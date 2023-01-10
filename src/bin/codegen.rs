@@ -1,5 +1,24 @@
 use goldilocks_ntt::{Field, divisors::{divisors, split, is_smooth}, permute::transpose_copy, utils::gcd};
 
+fn shift(var: &str, count: usize) -> String {
+    let count = count % 192;
+    if count == 0 {
+        format!("{var}")
+    } else if count < 96 {
+        format!("({var} << {count})")
+    } else {
+        format!("(-{})", shift(var, count - 96))
+    }
+}
+
+fn mul_root_384(var: &str, exp: usize) -> String {
+    if exp & 1 == 0 {
+        shift(var, exp / 2)
+    } else {
+        format!("{} + {}", shift(var, 24 + (exp / 2)), shift(var, 168 + (exp / 2)))
+    }
+}
+
 pub fn generate(size: usize) {
     println!(
         r#"/// Size {size} NTT.
@@ -23,8 +42,8 @@ fn ntt_{size}(values: &mut [Field]) {{
         } else if n == 3 {
             let [a, b, c] = vars else { unreachable!() };
             println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
-            println!("        {a} + {b}.mul_root_384(128) + {c}.mul_root_384(256),");
-            println!("        {a} + {b}.mul_root_384(256) + {c}.mul_root_384(128));");
+            println!("        {a} + ({b} << 64) - ({c} << 32),");
+            println!("        {a} - ({b} << 32) + ({c} << 64));");
         } else {
             let a = split(n);
             let b = n / a;
@@ -43,7 +62,7 @@ fn ntt_{size}(values: &mut [Field]) {{
                     let (exp, order) = (exp / g, order / g);
                     if 384 % order == 0 {
                         let exp = exp * 384 / order;
-                        println!("    let {var} = {var}.mul_root_384({exp});")
+                        println!("    let {var} = {};", mul_root_384(var, exp));
                     } else {
                         let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
                         println!("    let {var} = {var} * Field::from({omega}_u64);")
@@ -73,6 +92,7 @@ fn main() {
     println!(
         "{}",
         r#"//! Generated using `cargo run --bin codegen`
+#![allow(unused_parens)] // Makes codegen easier
 use crate::Field;
 
 /// Apply a small NTT to `values`, or return `false` if the size is not supported.
