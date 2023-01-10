@@ -3,6 +3,9 @@ use std::sync::Once;
 /// Multiplicative group order.
 const ORDER: u64 = 0xffff_ffff_0000_0000;
 
+/// Multiplicative group order without large factors (>= 17).
+const SMOOTH_ORDER: u64 = 64424509440;
+
 const TWOS: u32 = 32;
 
 /// Factors of the multiplicative group order other than two.
@@ -17,6 +20,10 @@ static DIVISORS_INIT: Once = Once::new();
 #[must_use]
 pub fn is_divisor(n: usize) -> bool {
     n > 0 && ORDER % (n as u64) == 0
+}
+
+pub fn is_smooth(n: usize) -> bool {
+    n > 0 && SMOOTH_ORDER % (n as u64) == 0
 }
 
 /// Returns sorted list of all divisors of the multiplicative group order.
@@ -65,7 +72,9 @@ pub fn split(n: usize) -> usize {
     let isqrt = (n as f64).sqrt() as usize;
     let isqrt = (isqrt + n / isqrt) / 2;
 
-    let i = divisors.binary_search(&(isqrt as u64)).unwrap_or_else(|i| i);
+    let i = divisors
+        .binary_search(&(isqrt as u64))
+        .unwrap_or_else(|i| i);
     for &d in divisors[..=i].iter().rev() {
         let d = d as usize;
         if n % d == 0 && n / d >= d {

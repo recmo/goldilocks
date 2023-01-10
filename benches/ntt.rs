@@ -1,7 +1,8 @@
 use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
-    ntt::{ntt_naive, recursive::four_step},
+    divisors::{divisors, is_smooth, split},
+    ntt::{ntt_naive, recursive::four_step, small::small_ntt},
     ntt_old::Fft,
 };
 
@@ -10,6 +11,7 @@ enum Algorithm {
     Naive,
     Old,
     Recursive,
+    Small,
 }
 
 #[derive(Parser, Debug)]
@@ -35,23 +37,40 @@ fn main() {
         .init();
     let cli = Args::parse();
 
-    const MAX_SIZE: usize = 1_usize << 32;
-
-    eprintln!("Generating random input");
-    let mut input = rand_vec(MAX_SIZE);
+    let max_exp = cli.max_exponent;
+    let max_size = 1 << max_exp;
+    eprintln!("Generating random input of size 2^{max_exp} = {max_size}");
+    let mut input = rand_vec(max_size);
 
     println!("size,duration,throughput");
-    for e in 10..=32 {
-        let size = 1 << e;
-        if size > input.len() {
-            break;
-        }
+    for size in divisors()
+        .iter()
+        .map(|&n| n as usize)
+        .filter(|&n| is_smooth(n) && n < max_size)
+    {
         let input = &mut input[..size];
 
+        // Compute matrix dimensions for some algorithms
+        let a = split(size);
+        let b = size / a;
+
+        // Skip unsupported sizes
+        if !match cli.algo {
+            Algorithm::Small => small_ntt(input),
+            Algorithm::Old => input.len().is_power_of_two(),
+            _ => true,
+        } {
+            continue;
+        }
+
+        // Benchmark
         let duration = time(|| match cli.algo {
             Algorithm::Naive => ntt_naive(input),
             Algorithm::Old => input.fft(),
             Algorithm::Recursive => four_step(input),
+            Algorithm::Small => {
+                small_ntt(input);
+            }
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

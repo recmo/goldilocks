@@ -64,11 +64,15 @@ unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usiz
     const PAR_THRESHOLD: usize = 1 << 10;
 
     if n < REC_THRESHOLD {
+        // Run down diagonals
         for i in 0..n {
             for j in 0..n {
                 unsafe {
                     // Safety: a and b are non-overlapping and point to valid elements.
-                    swap_nonoverlapping(a.add(i * stride + j), b.add(j * stride + i), 1);
+                    // TODO: Try diagonal order to reduce cache collision.
+                    let ai = i * stride + j;
+                    let bi = j * stride + i;
+                    swap_nonoverlapping(a.add(ai), b.add(bi), 1);
                 }
             }
         }
