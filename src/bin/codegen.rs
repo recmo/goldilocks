@@ -1,4 +1,4 @@
-use goldilocks_ntt::{ntt::recursive::divisor_split, permute::transpose_copy};
+use goldilocks_ntt::{divisors::split, permute::transpose_copy};
 
 pub fn generate(size: usize) {
     println!(
@@ -23,7 +23,7 @@ fn ntt_{size}(values: &mut [Field]) {{
                 println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
             }
         } else {
-            let a = divisor_split(n);
+            let a = split(n);
             let b = n / a;
             assert_eq!(a * b, n);
             assert!(a >= 2 && b >= 2);

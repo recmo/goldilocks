@@ -4,7 +4,6 @@ pub mod permutation;
 mod square;
 
 pub use self::{copy::*, cyclic::*, square::*};
-use crate::utils::gcd;
 
 /// Transpose a matrix in place.
 ///
@@ -13,21 +12,16 @@ use crate::utils::gcd;
 /// # Panics
 ///
 /// Panics if `matrix.len()` does not equal `width * height`.
-pub fn transpose(matrix: &mut [u64], width: usize, height: usize) {
-    assert_eq!(matrix.len(), width * height);
-    let g = gcd(width, height);
+pub fn transpose<T: Copy>(matrix: &mut [T], (rows, cols): (usize, usize)) {
+    assert_eq!(matrix.len(), rows * cols);
 
-    // Transpose the square blocks
-    for _j in (0..height).step_by(g) {
-        for _i in (0..width).step_by(g) {
-            todo!();
-            // transpose_square(&mut matrix[i + j * width..i + g + j * width],
-            // block* width, g);
-        }
+    if rows == cols {
+        assert_eq!(std::mem::size_of::<T>(), 8);
+        transpose_square_pub(unsafe { std::mem::transmute(matrix) }, cols, rows);
+    } else {
+        // TODO: Better algorithm.
+        transpose_copy(matrix, (rows, cols));
     }
-
-    // Transpose the blocks themselves
-    transpose_cyclic(matrix, g, width / g, height / g);
 }
 
 /// Transpose a matrix in place using a buffer.

@@ -1,5 +1,6 @@
 use super::small::small_ntt;
-use crate::{ntt::ntt_naive, permute::transpose_copy, Field};
+use crate::{divisors::split, ntt::ntt_naive, permute::transpose, Field};
+use rayon::prelude::*;
 
 /// Recursive Number Theoretic Transform.
 ///
@@ -12,15 +13,19 @@ use crate::{ntt::ntt_naive, permute::transpose_copy, Field};
 ///
 /// * <https://users.ece.cmu.edu/~franzf/papers/fft-enc11.pdf>
 pub fn four_step(value: &mut [Field]) {
+    const PAR_THRESHOLD: usize = 1 << 15;
+
     let n = value.len();
     if n <= 1 {
         return;
     }
 
     // Try an optimized small NTT.
-    // if small_ntt(value) {
-    //     return;
-    // }
+    if !cfg!(test) {
+        if small_ntt(value) {
+            return;
+        }
+    }
 
     // Base case for prime sizes.
     if n == 2 || n == 3 || n == 5 || n == 17 || n == 257 || n == 65537 {
@@ -29,52 +34,38 @@ pub fn four_step(value: &mut [Field]) {
     }
 
     // Interpret `value` as an approximately square matrix.
-    let a = divisor_split(n);
+    let a = split(n);
     if a <= 1 {
         panic!("Unimplemented four-step NTT for {}", n);
     }
     let b = n / a;
-    // eprintln!("{} = {a} × {b}", n);
     // Reinterpret as a × b matrix.
 
     // Transpose to b × a matrix.
-    transpose_copy(value, (a, b));
+    transpose(value, (a, b));
 
     // Compute `a`-sized FFTs.
-    value.chunks_exact_mut(a).for_each(four_step);
+    if n < PAR_THRESHOLD {
+        value.chunks_exact_mut(a).for_each(four_step);
+    } else {
+        value.par_chunks_exact_mut(a).for_each(four_step);
+    }
 
     // Apply twiddle factors.
     twiddle(value, (b, a));
 
     // Transpose to a × b matrix.
-    transpose_copy(value, (b, a));
+    transpose(value, (b, a));
 
     // Compute `b`-sized FFTs.
-    value.chunks_exact_mut(b).for_each(four_step);
+    if n < PAR_THRESHOLD {
+        value.chunks_exact_mut(b).for_each(four_step);
+    } else {
+        value.par_chunks_exact_mut(b).for_each(four_step);
+    }
 
     // Transpose back to get results in order.
-    transpose_copy(value, (a, b));
-}
-
-/// Goldilocks divisor split.
-///
-/// Given composite `n` that divides the multiplicative group order,
-/// return `(a, b)` such that `a <= b`, `a != 1`, `n = a * b` and `a` and `b`
-/// are as close as possible.
-#[must_use]
-pub fn divisor_split(n: usize) -> usize {
-    if n == 0 || (Field::MODULUS - 1) % (n as u64) != 0 {
-        panic!("{} does not divide multiplicative group order.", n);
-    }
-    let shift = n.trailing_zeros() / 2;
-    let k = match n >> (2 * shift) {
-        1..=3 => 1,
-        5 => 1,
-        6 => 2,
-        10 => 2,
-        _ => panic!("Unimplemented divisor split for {}", n),
-    };
-    k << shift
+    transpose(value, (a, b));
 }
 
 fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
@@ -104,19 +95,6 @@ fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
 mod tests {
     use super::{super::ntt_naive, *};
 
-    #[test]
-    fn test_divisor_split() {
-        assert_eq!(divisor_split(1), 1);
-        assert_eq!(divisor_split(2), 1);
-        assert_eq!(divisor_split(3), 1);
-        assert_eq!(divisor_split(4), 2);
-        assert_eq!(divisor_split(5), 1);
-        assert_eq!(divisor_split(6), 2);
-        assert_eq!(divisor_split(8), 2);
-        assert_eq!(divisor_split(16), 4);
-        assert_eq!(divisor_split(10), 2);
-        // TODO assert_eq!(divisor_split(20), 4);
-    }
     #[test]
     fn test_four_step_8() {
         let input = (0..8).rev().map(Field::from).collect::<Vec<_>>();

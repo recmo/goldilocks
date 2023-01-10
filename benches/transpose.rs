@@ -1,8 +1,9 @@
 use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
+    divisors::{divisors, split},
     ntt_old::transpose_square_stretch,
-    permute::{transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
+    permute::{transpose, transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -11,6 +12,7 @@ enum Algorithm {
     CopyWo,
     Square,
     Old,
+    New,
 }
 
 #[derive(Parser, Debug)]
@@ -44,31 +46,30 @@ fn main() {
         .init();
     let cli = Args::parse();
 
-    const MAX_SIZE: usize = 1_usize << 32;
-
     eprintln!("Generating random input");
-    let mut input = rand_vec(MAX_SIZE);
+    let mut input = rand_vec(1 << 20);
 
     println!("size,duration,throughput");
-    for size in 5..=16 {
-        let width = cli.aspect_width << size;
-        let height = cli.aspect_height << size;
-        let size = width * height;
+    for &size in divisors() {
+        let size = size as usize;
+        if size < 1024 {
+            continue;
+        }
         if size > input.len() {
             break;
         }
+        let a = split(size);
+        let b = size / a;
         let input = &mut input[..size];
 
         let duration = time(|| match cli.algo {
-            Algorithm::CopyRo => transpose_copy_ro(input, width, height),
-            Algorithm::CopyWo => transpose_copy_wo(input, width, height),
-            Algorithm::Square => transpose_square_pub(input, width, height),
+            Algorithm::CopyRo => transpose_copy_ro(input, b, a),
+            Algorithm::CopyWo => transpose_copy_wo(input, b, a),
+            Algorithm::Square => transpose_square_pub(input, b, a),
             Algorithm::Old => {
-                let size = height;
-                let stretch = width / size;
-                assert_eq!(input.len(), size * size * stretch);
-                transpose_square_stretch(input, size, stretch);
+                transpose_square_stretch(input, a, b / a);
             }
+            Algorithm::New => transpose(input, (a, b)),
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

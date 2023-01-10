@@ -14,6 +14,7 @@
 #![cfg_attr(has_doc_cfg, feature(doc_cfg))]
 #![feature(slice_swap_unchecked)]
 
+pub mod divisors;
 mod field;
 pub mod ntt;
 pub mod ntt_old;
