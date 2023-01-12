@@ -1,6 +1,27 @@
 use crate::Field;
 use crate::ntt::{ntt, intt};
 
+/// In-place circular convolution.
+/// 
+/// Expects `b` to be in NTT form.
+/// 
+/// # Panics
+/// 
+/// Panics if `a` and `b` have different lengths.
+pub fn circular(a: &mut [Field], b: &[Field]) {
+    assert_eq!(a.len(), b.len());
+    dbg!(&a);
+    dbg!(&b);
+    ntt(a);
+    dbg!(&a);
+    for (a, b) in a.iter_mut().zip(b) {
+        *a *= *b;
+    }
+    dbg!(&a);
+    intt(a);
+    dbg!(&a);
+}
+
 pub fn circular_naive(a: &[Field], b: &[Field]) -> Vec<Field> {
     assert_eq!(a.len(), b.len());
     let n = a.len();
@@ -10,19 +31,6 @@ pub fn circular_naive(a: &[Field], b: &[Field]) -> Vec<Field> {
             result[i] += a[j] * b[(i + n - j) % n];
         }
     }
-    result
-}
-
-pub fn circular_ntt(a: &[Field], b: &[Field]) -> Vec<Field> {
-    assert_eq!(a.len(), b.len());
-    let n = a.len();
-
-    let mut a = a.to_vec();
-    let mut b = b.to_vec();
-    ntt(&mut a);
-    ntt(&mut b);
-    let mut result = a.iter().zip(b).map(|(&a, b)| a * b).collect::<Vec<_>>();
-    intt(&mut result);
     result
 }
 
@@ -41,8 +49,10 @@ mod tests {
     #[test]
     fn test_circular_ntt() {
         let a = [Field::from(1), Field::from(2), Field::from(3)];
-        let b = [Field::from(4), Field::from(5), Field::from(6)];
-        let c = circular_ntt(&a, &b);
+        let mut b = [Field::from(4), Field::from(5), Field::from(6)];
+        ntt(&mut b);
+        let mut c = a.clone();
+        circular(&mut c, &b);
         assert_eq!(c, [Field::from(31), Field::from(31), Field::from(28)]);
     }
 }
