@@ -99,6 +99,9 @@ pub fn ntt_3(values: &mut [Field]) {
 
 
 /// Rader NTT of size 5.
+/// 
+/// Uses 5 multiplications, 2 shifts and 18 additions/subtractions. Compare this
+/// to the naive implementation which uses 16 multiplications and 20 additions/subtractions.
 pub fn ntt_5(values: &mut [Field]) {
     debug_assert_eq!(values.len(), 5);
     let a = values[0];
@@ -108,46 +111,8 @@ pub fn ntt_5(values: &mut [Field]) {
     let e = values[4];
     let t = a;
 
-    // 2^i = 1, 2, 4, 3 mod 5
-    // 3^i = 1, 3, 4, 2 mod 5 
-
-    let mut coeffs = [1, 2, 4, 3]
-        .iter()
-        .map(|i| Field::root(5).unwrap().pow(*i))
-        .collect::<Vec<_>>();
-    crate::ntt::ntt_naive(coeffs.as_mut_slice());
-    dbg!(&coeffs);
-
-    let mut conv = [
-        values[1],
-        values[3],
-        values[4],
-        values[2],
-    ];
-
-    // values[0] = 10.into();
-    // values[1] = conv[1 - 1];
-    // values[2] = conv[2 - 1];
-    // values[3] = conv[4 - 1];
-    // values[4] = conv[3 - 1];
-
     // Permute [b, c, d, e] to make the remaining DFT matrix cyclic.
     let (b, c, d, e) = (b, d, e, c);
-
-    assert_eq!(b, conv[0]);
-    assert_eq!(c, conv[1]);
-    assert_eq!(d, conv[2]);
-    assert_eq!(e, conv[3]);
-
-
-    // assert_eq!(RADER_5[0], coeffs[0]);
-    // assert_eq!(RADER_5[1], coeffs[1]);
-    // assert_eq!(RADER_5[2], coeffs[2]);
-    // assert_eq!(RADER_5[3], coeffs[3]);
-
-    crate::convolve::circular(&mut conv, &coeffs);
-
-    dbg!([b, c, d, e]);
 
     // Transform [b, c, d, e] for cyclic convolution.
     let (b, d) = (b + d, b - d);
@@ -157,18 +122,17 @@ pub fn ntt_5(values: &mut [Field]) {
     let (d, e) = (d + e, d - e);
     let (b, c, d, e) = (b, d, c, e);
 
+    // At this point `b` sums all the other terms.
     let a = a + b;
 
-    dbg!([b, c, d, e]);
+    // Point multiply by the NTT transform of [ω ω² ω⁴ ω³],
+    // Also includes 1/4 scaling factor for the inverse transform.
+    let b = b * Field::new(4611686017353646080);
+    let c = c * Field::new(16181989089180173841);
+    let d = d * Field::new(5818851782451133869);
+    let e = e * Field::new(11322249509082494407);
 
-    // Point multiply by the transform of [ω ω³ ω⁴ ω²],
-    let b = b * RADER_5[0];
-    let c = c * RADER_5[1];
-    let d = d * RADER_5[2];
-    let e = e * RADER_5[3];
-
-    dbg!([b, c, d, e]);
-
+    // We add `x₀` to the constant term.
     let b = b + t;
 
     // Transform back to complete the cyclic convolution.
@@ -178,8 +142,6 @@ pub fn ntt_5(values: &mut [Field]) {
     let (b, c) = (b + c, b - c);
     let (d, e) = (d + e, d - e);
     let (b, c, d, e) = (b, d, c, e);
-
-    dbg!([b, c, d, e]);
 
     // Permute [b, c, d, e] back to original order.
     let (b, c, d, e) = (b, c, e, d);

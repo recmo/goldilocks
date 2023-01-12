@@ -10,16 +10,11 @@ use crate::ntt::{ntt, intt};
 /// Panics if `a` and `b` have different lengths.
 pub fn circular(a: &mut [Field], b: &[Field]) {
     assert_eq!(a.len(), b.len());
-    dbg!(&a);
-    dbg!(&b);
     ntt(a);
-    dbg!(&a);
     for (a, b) in a.iter_mut().zip(b) {
         *a *= *b;
     }
-    dbg!(&a);
     intt(a);
-    dbg!(&a);
 }
 
 pub fn circular_naive(a: &[Field], b: &[Field]) -> Vec<Field> {
