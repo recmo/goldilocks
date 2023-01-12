@@ -1,4 +1,5 @@
 pub mod algo;
+mod rand;
 
 use core::{iter, ops};
 use std::fmt;

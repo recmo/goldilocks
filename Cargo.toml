@@ -45,9 +45,12 @@ tracing-flame = "0.2.0"
 plonky2_field = { path = "../plonky2/field", optional = true }
 plonky2_util = { path = "../plonky2/util", optional = true }
 
+transpose = { git = "https://github.com/preiter93/transpose.git" }
+
 
 # For benchmarking only
 criterion = { version = "0.4.0", optional = true }
+
 
 [dev-dependencies]
 clap = { version = "4.0.32", features = ["derive"] }

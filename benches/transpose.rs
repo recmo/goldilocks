@@ -3,7 +3,7 @@ use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
     ntt_old::transpose_square_stretch,
-    permute::{transpose, transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
+    permute::{gw18, transpose, transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -13,6 +13,8 @@ enum Algorithm {
     Square,
     Old,
     New,
+    Lib,
+    Gw18,
 }
 
 #[derive(Parser, Debug)]
@@ -55,13 +57,13 @@ fn main() {
         let input = &mut input[..size];
 
         // Check support
-        match cli.algo {
-            Algorithm::Square => {
-                if a != b {
-                    continue;
-                }
-            }
-            _ => {}
+        let supported = match cli.algo {
+            Algorithm::Old => (a >= 2) && a.is_power_of_two() && (a == b || 2 * a == b),
+            Algorithm::Square => a == b,
+            _ => true,
+        };
+        if !supported {
+            continue;
         }
 
         let duration = time(|| match cli.algo {
@@ -72,6 +74,13 @@ fn main() {
                 transpose_square_stretch(input, a, b / a);
             }
             Algorithm::New => transpose(input, (a, b)),
+            Algorithm::Lib => {
+                let mut w = vec![0; a + b];
+                transpose::ip_transpose(input, w.as_mut_slice(), a, b);
+            }
+            Algorithm::Gw18 => {
+                gw18::transpose(input, (a, b));
+            }
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

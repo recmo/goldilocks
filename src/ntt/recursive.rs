@@ -1,5 +1,5 @@
 use super::small::small_ntt;
-use crate::{divisors::split, ntt::ntt_naive, permute::transpose, Field};
+use crate::{divisors::split, ntt::ntt_naive, permute::gw18::transpose, Field};
 use rayon::prelude::*;
 
 /// Recursive Number Theoretic Transform.
@@ -12,7 +12,7 @@ use rayon::prelude::*;
 /// * <https://dl.acm.org/doi/10.1145/1464291.1464352>
 ///
 /// * <https://users.ece.cmu.edu/~franzf/papers/fft-enc11.pdf>
-pub fn four_step(value: &mut [Field]) {
+pub fn ntt(value: &mut [Field]) {
     const PAR_THRESHOLD: usize = 1 << 15;
 
     let n = value.len();
@@ -46,9 +46,9 @@ pub fn four_step(value: &mut [Field]) {
 
     // Compute `a`-sized FFTs.
     if n < PAR_THRESHOLD {
-        value.chunks_exact_mut(a).for_each(four_step);
+        value.chunks_exact_mut(a).for_each(ntt);
     } else {
-        value.par_chunks_exact_mut(a).for_each(four_step);
+        value.par_chunks_exact_mut(a).for_each(ntt);
     }
 
     // Apply twiddle factors.
@@ -59,16 +59,16 @@ pub fn four_step(value: &mut [Field]) {
 
     // Compute `b`-sized FFTs.
     if n < PAR_THRESHOLD {
-        value.chunks_exact_mut(b).for_each(four_step);
+        value.chunks_exact_mut(b).for_each(ntt);
     } else {
-        value.par_chunks_exact_mut(b).for_each(four_step);
+        value.par_chunks_exact_mut(b).for_each(ntt);
     }
 
     // Transpose back to get results in order.
     transpose(value, (a, b));
 }
 
-fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
+pub fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
     assert_eq!(value.len(), rows * cols);
 
     let root = Field::root(value.len() as u64)
@@ -99,7 +99,7 @@ mod tests {
     fn test_four_step_8() {
         let input = (0..8).rev().map(Field::from).collect::<Vec<_>>();
         let mut output = input.clone();
-        four_step(&mut output);
+        ntt(&mut output);
         let mut reference = input;
         ntt_naive(&mut reference);
         assert_eq!(output, reference);
@@ -112,7 +112,7 @@ mod tests {
             let size = size * size;
             let input = (0..size).map(Field::from).collect::<Vec<_>>();
             let mut output = input.clone();
-            four_step(&mut output);
+            ntt(&mut output);
             let mut reference = input;
             ntt_naive(&mut reference);
             assert_eq!(output, reference);
@@ -126,7 +126,7 @@ mod tests {
             let size = size * size;
             let input = (0..size).map(Field::from).collect::<Vec<_>>();
             let mut output = input.clone();
-            four_step(&mut output);
+            ntt(&mut output);
             let mut reference = input;
             ntt_naive(&mut reference);
             assert_eq!(output, reference);

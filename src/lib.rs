@@ -14,12 +14,12 @@
 #![cfg_attr(has_doc_cfg, feature(doc_cfg))]
 #![feature(slice_swap_unchecked)]
 
+pub mod convolve;
 pub mod divisors;
 mod field;
 pub mod ntt;
 pub mod ntt_old;
 pub mod permute;
-mod rand;
 pub mod utils;
 
 pub use field::Field;
@@ -62,12 +62,26 @@ pub mod bench {
         let mut duration = 0.0;
         let mut count = 0;
         while duration < 5.0 {
+            // Do a single run first
             let start = Instant::now();
             let out = black_box(f());
             let end = Instant::now();
             drop(out);
-            duration += end.duration_since(start).as_secs_f64();
-            count += 1;
+            let run_duration = end.duration_since(start).as_secs_f64();
+
+            if run_duration > 0.001 {
+                duration += run_duration;
+                count += 1;
+            } else {
+                // Very fast function, run it a lot to get a good measurement
+                let start = Instant::now();
+                for _ in 0..1000 {
+                    black_box(f());
+                }
+                let end = Instant::now();
+                duration += end.duration_since(start).as_secs_f64();
+                count += 1000;
+            }
         }
         duration / f64::from(count)
     }

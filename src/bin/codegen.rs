@@ -1,4 +1,9 @@
-use goldilocks_ntt::{Field, divisors::{divisors, split, is_smooth}, permute::transpose_copy, utils::gcd};
+use goldilocks_ntt::{
+    divisors::{divisors, is_smooth, split},
+    permute::transpose_copy,
+    utils::gcd,
+    Field,
+};
 
 fn shift(var: &str, count: usize) -> String {
     let count = count % 192;
@@ -15,7 +20,11 @@ fn mul_root_384(var: &str, exp: usize) -> String {
     if exp & 1 == 0 {
         shift(var, exp / 2)
     } else {
-        format!("{} + {}", shift(var, 24 + (exp / 2)), shift(var, 168 + (exp / 2)))
+        format!(
+            "{} + {}",
+            shift(var, 24 + (exp / 2)),
+            shift(var, 168 + (exp / 2))
+        )
     }
 }
 
@@ -93,13 +102,22 @@ fn ntt_{size}(values: &mut [Field]) {{
 }
 
 fn main() {
-    let sizes = divisors().iter().map(|n| *n as usize).filter(|&s| is_smooth(s) && s >= 2 && s <= 256).collect::<Vec<_>>();
+    let sizes = divisors()
+        .iter()
+        .map(|n| *n as usize)
+        .filter(|&s| is_smooth(s) && s >= 2 && s <= 256)
+        .collect::<Vec<_>>();
 
     // Generate header and dispatch function
     println!(
         "{}",
         r#"//! Generated using `cargo run --bin codegen`
-#![allow(unused_parens)] // Makes codegen easier
+#![allow(
+    unused_parens,
+    clippy::similar_names,
+    clippy::unreadable_literal,
+    clippy::too_many_lines
+)]
 use crate::Field;
 
 const R51: Field = Field::new(0x0e736627a0aeb983);

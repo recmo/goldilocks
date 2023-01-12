@@ -5,6 +5,14 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
+pub fn transpose<T: Copy>(a: &mut [T], size: usize) {
+    assert_eq!(a.len(), size * size);
+    assert_eq!(std::mem::size_of::<T>(), std::mem::size_of::<u64>());
+    unsafe {
+        transpose_square(a.as_mut_ptr() as *mut u64, size, size);
+    }
+}
+
 /// Transpose a square power-of-two matrix.
 ///
 /// # Panics

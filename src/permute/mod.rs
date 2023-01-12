@@ -1,9 +1,11 @@
+// mod inner_block;
 mod copy;
-mod cyclic;
+// mod cyclic;
+pub mod gw18;
 pub mod permutation;
 mod square;
 
-pub use self::{copy::*, cyclic::*, square::*};
+pub use self::{copy::*, square::*};
 
 /// Transpose a matrix in place.
 ///
@@ -83,7 +85,7 @@ mod tests {
             0, 1, 2, 3, 
             4, 5, 6, 7
         ];
-        transpose_copy(&mut matrix, (2, 2));
+        transpose_copy(&mut matrix, (2, 4));
         assert_eq!(matrix, [
             0, 4, 
             1, 5, 
