@@ -64,6 +64,21 @@ mod tests {
     }
 
     #[test]
+    pub fn test_reverse_inverse() {
+        let size = 15;
+        let mut rng = StdRng::seed_from_u64(Field::MODULUS);
+        let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut expected = values.clone();
+        values[1..].reverse();
+        ntt(&mut values);
+        for x in values.iter_mut() {
+            *x *= Field::from(size as u64).inv();
+        }
+        intt(&mut expected);
+        assert_eq!(values, expected);
+    }
+
+    #[test]
     fn test_ntt_intt_inverse_small() {
         test_ntt_intt_inverse(0);
         test_ntt_intt_inverse(1);

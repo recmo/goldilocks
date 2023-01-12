@@ -12,6 +12,22 @@ pub fn branch_hint() {
     }
 }
 
+pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
+    assert!(m > 0);
+    assert!(m < 1 << (usize::BITS / 2), "modulus is too large");
+    a %= m;
+
+    let mut r = 1;
+    while e > 0 {
+        if e & 1 == 1 {
+            r = (r * a) % m;
+        }
+        a = (a * a) % m;
+        e = e >> 1;
+    }
+    r
+}
+
 /// Greatest common divisor.
 pub fn gcd(mut a: usize, mut b: usize) -> usize {
     if a == 0 {

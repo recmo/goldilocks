@@ -11,7 +11,21 @@ pub fn ntt(values: &mut [Field]) {
 }
 
 pub fn intt(values: &mut [Field]) {
-    naive::ntt(values);
+    if values.len() <= 1 {
+        return;
+    }
+
+    // Apply 1/N scaling factor
+    let scale = Field::from(values.len() as u64).inv();
+    for x in values.iter_mut() {
+        *x *= scale;
+    }
+
+    // Permute j = N - i mod N
+    values[1..].reverse();
+
+    // Apply forward NTT
+    ntt(values);
 }
 
 #[cfg(test)]

@@ -2,16 +2,7 @@ use super::small::small_ntt;
 use crate::{divisors::split, ntt::naive, permute::gw18::transpose, Field};
 use rayon::prelude::*;
 
-/// Recursive Number Theoretic Transform.
-///
-/// Cooley–Tukey Mixed-Radix "six-step" FFT algorithm with [`small_ntt`] as
-/// base case.
-///
-/// * David H. Bailey (1989). "FFTs in External or Hierarchical Memory". <https://www.davidhbailey.com/dhbpapers/fftq.pdf>
-///
-/// * <https://dl.acm.org/doi/10.1145/1464291.1464352>
-///
-/// * <https://users.ece.cmu.edu/~franzf/papers/fft-enc11.pdf>
+/// Cooley–Tukey Mixed-Radix "six-step" FFT algorithm.
 pub fn ntt(value: &mut [Field]) {
     const PAR_THRESHOLD: usize = 1 << 15;
 
