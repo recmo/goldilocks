@@ -53,42 +53,50 @@ pub fn rader_5(vars: &mut [&str]) {
     *e = t;
 
     // Transform [b, c, d, e] for cyclic convolution.
-    println!(r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
+    println!(
+        r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
     let ({c}, {e}) = ({c} + {e}, {c} - {e});
     let {e} = {e} << 48;
     let ({b}, {c}) = ({b} + {c}, {b} - {c});
-    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#);
+    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#
+    );
     // let (b, c, d, e) = (b, d, c, e);
     swap(c, d);
 
-    // Add `b` (which is now the sum of b..=e to `a`, keeping a copy of `a` in `t`. 
-    println!(r#"    let t = {a};
-    let {a} = {a} + {b};"#);
+    // Add `b` (which is now the sum of b..=e to `a`, keeping a copy of `a` in `t`.
+    println!(
+        r#"    let t = {a};
+    let {a} = {a} + {b};"#
+    );
 
     // Multiply by the NTT transform of [ω ω² ω⁴ ω³],
     // Also includes 1/4 scaling factor for the inverse transform.
-    println!(r#"    let {b} = {b} * Field::new(4611686017353646080);
+    println!(
+        r#"    let {b} = {b} * Field::new(4611686017353646080);
     let {c} = {c} * Field::new(16181989089180173841);
     let {d} = {d} * Field::new(5818851782451133869);
-    let {e} = {e} * Field::new(11322249509082494407);"#);
+    let {e} = {e} * Field::new(11322249509082494407);"#
+    );
     // At this point `b` sums all the other terms.
 
-    // We add `t` to the constant term, so it adds to all the other terms after inverse transform.
+    // We add `t` to the constant term, so it adds to all the other terms after
+    // inverse transform.
     println!("    let {b} = {b} + t;");
 
     // Transform back to complete the cyclic convolution.
-    println!(r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
+    println!(
+        r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
     let ({c}, {e}) = ({c} + {e}, {c} - {e});
     let {e} = -({e} << 48);
     let ({b}, {c}) = ({b} + {c}, {b} - {c});
-    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#);
+    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#
+    );
     swap(c, d);
 
     // Permute [b, c, d, e] back to original order.
     // let (b, c, d, e) = (b, c, e, d);
     swap(d, e);
 }
-
 
 pub fn generate(size: usize) {
     println!(

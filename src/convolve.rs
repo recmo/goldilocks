@@ -1,12 +1,14 @@
-use crate::Field;
-use crate::ntt::{ntt, intt};
+use crate::{
+    ntt::{intt, ntt},
+    Field,
+};
 
 /// In-place circular convolution.
-/// 
+///
 /// Expects `b` to be in NTT form.
-/// 
+///
 /// # Panics
-/// 
+///
 /// Panics if `a` and `b` have different lengths.
 pub fn circular(a: &mut [Field], b: &[Field]) {
     assert_eq!(a.len(), b.len());

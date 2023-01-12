@@ -1,33 +1,11 @@
-use super::small;
 use crate::Field;
 
-const RADER_5: [Field; 4] = [
-    Field::new(4611686017353646080),
-    Field::new(16181989089180173841),
-    Field::new(5818851782451133869),
-    Field::new(11322249509082494407),
-];
-
 pub fn ntt(values: &mut [Field]) -> bool {
-    match values.len() {
-        ..=1 => {}
-        2 => ntt_2(values),
-        3 => ntt_3(values),
-        17 => ntt_17(values),
-        257 => ntt_257(values),
-        65537 => ntt_65537(values),
-        _ => return false,
-    }
-    true
-}
-
-
-pub fn rader_ntt(values: &mut [Field]) {
     let n = values.len();
 
     // Lookup generators for all factors.
     let (g, g_inv): (usize, usize) = match n {
-        ..=1 => return,
+        ..=1 => return true,
         2 => (1, 1),
         3 => (2, 3),
         5 => (2, 3),
@@ -36,18 +14,20 @@ pub fn rader_ntt(values: &mut [Field]) {
         65537 => (3, 21846),
         _ => panic!("Size {n} not supported by Rader NTT"),
     };
+    debug_assert_eq!((g * g_inv) % n, 1);
 
     // Construct permutations.
     let permutation = |i: usize| g.pow(i as u32) % n;
     let inv_permutation = |i: usize| g_inv.pow(i as u32) % n;
 
-    for i in 0..n - 1 {
-        dbg!(i, permutation(i), inv_permutation(i));
-        assert_eq!(inv_permutation(permutation(i)), i);
-    }
+    // for i in 0..n - 1 {
+    //     dbg!(i, permutation(i), inv_permutation(i));
+    //     assert_eq!(inv_permutation(permutation(i)), i);
+    // }
+    todo!()
 }
 
-/// Rader NTT of size 3.
+/// Rader NTT of size 2.
 ///
 /// It's basically the same as the naive NTT.
 pub fn ntt_2(values: &mut [Field]) {
@@ -97,11 +77,11 @@ pub fn ntt_3(values: &mut [Field]) {
     values[2] = c;
 }
 
-
 /// Rader NTT of size 5.
-/// 
-/// Uses 5 multiplications, 2 shifts and 18 additions/subtractions. Compare this
-/// to the naive implementation which uses 16 multiplications and 20 additions/subtractions.
+///
+/// Uses 4 multiplications, 2 shifts and 18 additions/subtractions. Compare this
+/// to the naive implementation which uses 16 multiplications and 20
+/// additions/subtractions.
 pub fn ntt_5(values: &mut [Field]) {
     debug_assert_eq!(values.len(), 5);
     let a = values[0];
@@ -153,52 +133,22 @@ pub fn ntt_5(values: &mut [Field]) {
     values[4] = e;
 }
 
-pub fn ntt_17(values: &mut [Field]) {
-    todo!();
-}
-
-pub fn ntt_257(values: &mut [Field]) {
-    todo!();
-}
-
-pub fn ntt_65537(values: &mut [Field]) {
-    todo!();
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{super::ntt_naive, *};
+    use super::{super::tests::test_ntt_fn, *};
 
     #[test]
-    fn test_ntt_3() {
-        let size = 3;
-        let input = (43..43 + size).map(Field::from).collect::<Vec<_>>();
-        let mut output = input.clone();
-        ntt_3(output.as_mut_slice());
-        let mut output_ref = input;
-        ntt_naive(output_ref.as_mut_slice());
-        assert_eq!(output, output_ref);
+    fn test_ntt_2() {
+        test_ntt_fn(ntt_3, 3);
     }
 
     #[test]
-    fn test_ntt_5_coeff() {
-        let scale = Field::from(4).inv();
-        let mut coeffs = [1,2,4,3]
-            .iter()
-            .map(|i| Field::root(5).unwrap().pow(*i) * scale)
-            .collect::<Vec<_>>();
-        ntt_naive(coeffs.as_mut_slice());
-        assert_eq!(RADER_5, coeffs[..]);
+    fn test_ntt_3() {
+        test_ntt_fn(ntt_3, 3);
     }
 
     #[test]
     fn test_ntt_5() {
-        let size = 5;
-        let input = (0..size).map(Field::from).collect::<Vec<_>>();
-        let mut output = input.clone();
-        ntt_5(output.as_mut_slice());
-        let mut output_ref = input;
-        ntt_naive(output_ref.as_mut_slice());
-        assert_eq!(output, output_ref);
+        test_ntt_fn(ntt_5, 5);
     }
 }

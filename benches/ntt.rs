@@ -51,7 +51,7 @@ fn main() {
     for size in divisors()
         .iter()
         .map(|&n| n as usize)
-        .filter(|&n| is_smooth(n) && n < max_size)
+        .filter(|&n| is_smooth(n) && n > 1 && n < max_size)
     {
         let input = &mut input[..size];
 

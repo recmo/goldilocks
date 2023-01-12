@@ -1,5 +1,5 @@
 use super::small::small_ntt;
-use crate::{divisors::split, ntt::ntt_naive, permute::gw18::transpose, Field};
+use crate::{divisors::split, ntt::naive, permute::gw18::transpose, Field};
 use rayon::prelude::*;
 
 /// Recursive Number Theoretic Transform.
@@ -29,7 +29,7 @@ pub fn ntt(value: &mut [Field]) {
 
     // Base case for prime sizes.
     if n == 2 || n == 3 || n == 5 || n == 17 || n == 257 || n == 65537 {
-        ntt_naive(value);
+        naive::ntt(value);
         return;
     }
 
@@ -93,7 +93,7 @@ pub fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::ntt_naive, *};
+    use super::{super::naive, *};
 
     #[test]
     fn test_four_step_8() {
@@ -101,7 +101,7 @@ mod tests {
         let mut output = input.clone();
         ntt(&mut output);
         let mut reference = input;
-        ntt_naive(&mut reference);
+        naive::ntt(&mut reference);
         assert_eq!(output, reference);
     }
 
@@ -114,7 +114,7 @@ mod tests {
             let mut output = input.clone();
             ntt(&mut output);
             let mut reference = input;
-            ntt_naive(&mut reference);
+            naive::ntt(&mut reference);
             assert_eq!(output, reference);
         }
     }
@@ -128,7 +128,7 @@ mod tests {
             let mut output = input.clone();
             ntt(&mut output);
             let mut reference = input;
-            ntt_naive(&mut reference);
+            naive::ntt(&mut reference);
             assert_eq!(output, reference);
         }
     }

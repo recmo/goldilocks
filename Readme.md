@@ -24,9 +24,7 @@ cargo bench --bench criterion --features="criterion"
 Run NTT benchmarks
 
 ```sh
-cargo bench --bench ntt --features="rand,rayon"
-# cargo install inferno
-inferno-flamegraph < tracing.folded  > tracing-flamegraph.svg
+cargo bench --all-features --bench ntt -- recursive 32
 ```
 
 Check documentation coverage

@@ -1,4 +1,4 @@
-#![cfg(feature = "rand")]
+#![cfg(any(test, feature = "rand"))]
 
 use crate::Field;
 use rand::{
