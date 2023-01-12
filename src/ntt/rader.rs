@@ -109,7 +109,6 @@ pub fn ntt_5(values: &mut [Field]) {
     let c = values[2];
     let d = values[3];
     let e = values[4];
-    let t = a;
 
     // Permute [b, c, d, e] to make the remaining DFT matrix cyclic.
     let (b, c, d, e) = (b, d, e, c);
@@ -123,6 +122,7 @@ pub fn ntt_5(values: &mut [Field]) {
     let (b, c, d, e) = (b, d, c, e);
 
     // At this point `b` sums all the other terms.
+    let t = a;
     let a = a + b;
 
     // Point multiply by the NTT transform of [ω ω² ω⁴ ω³],

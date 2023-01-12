@@ -1,3 +1,5 @@
+use std::mem::swap;
+
 use goldilocks_ntt::{
     divisors::{divisors, is_smooth, split},
     permute::transpose_copy,
@@ -28,6 +30,66 @@ fn mul_root_384(var: &str, exp: usize) -> String {
     }
 }
 
+pub fn naive_2(vars: &mut [&str]) {
+    let [a, b] = vars else { panic!() };
+    println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
+}
+
+pub fn naive_3(vars: &mut [&str]) {
+    let [a, b, c] = vars else { panic!() };
+    println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
+    println!("        {a} + ({b} << 64) - ({c} << 32),");
+    println!("        {a} - ({b} << 32) + ({c} << 64));");
+}
+
+pub fn rader_5(vars: &mut [&str]) {
+    let [a, b, c, d, e] = vars else { panic!() };
+
+    // Permute [b, c, d, e] to make the remaining DFT matrix cyclic.
+    // let (b, c, d, e) = (b, d, e, c);
+    let t = *c;
+    *c = d;
+    *d = e;
+    *e = t;
+
+    // Transform [b, c, d, e] for cyclic convolution.
+    println!(r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
+    let ({c}, {e}) = ({c} + {e}, {c} - {e});
+    let {e} = {e} << 48;
+    let ({b}, {c}) = ({b} + {c}, {b} - {c});
+    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#);
+    // let (b, c, d, e) = (b, d, c, e);
+    swap(c, d);
+
+    // Add `b` (which is now the sum of b..=e to `a`, keeping a copy of `a` in `t`. 
+    println!(r#"    let t = {a};
+    let {a} = {a} + {b};"#);
+
+    // Multiply by the NTT transform of [ω ω² ω⁴ ω³],
+    // Also includes 1/4 scaling factor for the inverse transform.
+    println!(r#"    let {b} = {b} * Field::new(4611686017353646080);
+    let {c} = {c} * Field::new(16181989089180173841);
+    let {d} = {d} * Field::new(5818851782451133869);
+    let {e} = {e} * Field::new(11322249509082494407);"#);
+    // At this point `b` sums all the other terms.
+
+    // We add `t` to the constant term, so it adds to all the other terms after inverse transform.
+    println!("    let {b} = {b} + t;");
+
+    // Transform back to complete the cyclic convolution.
+    println!(r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
+    let ({c}, {e}) = ({c} + {e}, {c} - {e});
+    let {e} = -({e} << 48);
+    let ({b}, {c}) = ({b} + {c}, {b} - {c});
+    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#);
+    swap(c, d);
+
+    // Permute [b, c, d, e] back to original order.
+    // let (b, c, d, e) = (b, c, e, d);
+    swap(d, e);
+}
+
+
 pub fn generate(size: usize) {
     println!(
         r#"/// Size {size} NTT.
@@ -46,20 +108,11 @@ fn ntt_{size}(values: &mut [Field]) {{
     fn recurse(vars: &mut [&str]) {
         let n = vars.len();
         if n == 2 {
-            let [a, b] = vars else { unreachable!() };
-            println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
+            naive_2(vars);
         } else if n == 3 {
-            let [a, b, c] = vars else { unreachable!() };
-            println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
-            println!("        {a} + ({b} << 64) - ({c} << 32),");
-            println!("        {a} - ({b} << 32) + ({c} << 64));");
+            naive_3(vars);
         } else if n == 5 {
-            let [a, b, c, d, e] = vars else { unreachable!() };
-            println!("    let ({a}, {b}, {c}, {d}, {e}) = ({a} + {b} + {c} + {d} + {e},");
-            println!("        {a} + {b} * R51 + {c} * R52 + {d} * R53 + {e} * R54,");
-            println!("        {a} + {b} * R52 + {c} * R54 + {d} * R51 + {e} * R53,");
-            println!("        {a} + {b} * R53 + {c} * R51 + {d} * R54 + {e} * R52,");
-            println!("        {a} + {b} * R54 + {c} * R53 + {d} * R52 + {e} * R51);");
+            rader_5(vars);
         } else {
             let a = split(n);
             let b = n / a;
