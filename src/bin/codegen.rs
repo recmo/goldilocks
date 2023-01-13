@@ -36,6 +36,7 @@ fn ntt(vars: &mut [&str]) {
         2 => naive_2(vars),
         3 => naive_3(vars),
         5 => rader_5(vars),
+        15 => good_thomas(vars),
         _ => cooley_tukey(vars),
     }
 }
@@ -139,6 +140,40 @@ fn cooley_tukey(vars: &mut [&str]) {
     // Now vars is a 2D array of size a x b
     vars.chunks_exact_mut(b).for_each(ntt);
     transpose_copy(vars, (a, b));
+}
+
+fn good_thomas(vars: &mut [&str]) {
+    debug_assert_eq!(vars.len(), 15);
+
+    // Parameters
+    let n = 15;
+    let (a, b) = (3, 5);
+    let (n1, n2) = (5, 3);
+    let (m1, m2) = (10, 6);
+
+    let permute_i = |i| {
+        let (i1, i2) = (i / b, i % b);
+        (i1 * n1 + i2 * n2) % n
+    };
+    let permute_k = |i| {
+        let (i1, i2) = (i % a, i / a);
+        (i1 * m1 + i2 * m2) % n
+    };
+
+    // Input permutation.
+    let mut buffer = [""; 15];
+    for (i, b) in buffer.iter_mut().enumerate() {
+        *b = vars[permute_i(i)];
+    }
+    
+    buffer.chunks_exact_mut(b).for_each(ntt);
+    transpose_copy(&mut buffer, (a, b));
+    buffer.chunks_exact_mut(a).for_each(ntt);
+
+    // Output permutation.
+    for (i, v) in buffer.iter().enumerate() {
+        vars[permute_k(i)] = *v;
+    }
 }
 
 pub fn generate(size: usize) {

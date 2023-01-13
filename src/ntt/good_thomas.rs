@@ -4,6 +4,7 @@
 use crate::Field;
 use crate::ntt::small;
 use crate::permute::gw18::transpose;
+use crate::utils::gcd;
 
 pub fn recurse(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize, usize)) {
 
@@ -12,18 +13,31 @@ pub fn recurse(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize
 
 pub fn ntt_15(values: &mut [Field]) {
     debug_assert_eq!(values.len(), 15);
+
+    // Parameters
     let n = 15;
     let (a, b) = (3, 5);
     let (n1, n2) = (5, 3);
     let (m1, m2) = (10, 6);
 
+    debug_assert_eq!(a * b, n);
+    debug_assert_eq!(gcd(a, b), 1);
+    debug_assert_eq!((n1 * m2) % n, 0);
+    debug_assert_eq!((n2 * m1) % n, 0);
+
+    let permute_i = |i| {
+        let (i1, i2) = (i / b, i % b);
+        (i1 * n1 + i2 * n2) % n
+    };
+    let permute_k = |i| {
+        let (i1, i2) = (i % a, i / a);
+        (i1 * m1 + i2 * m2) % n
+    };
+
     // Input permutation.
     let mut buffer = [Field::new(0); 15];
-    for i1 in 0..a {
-        for i2 in 0..b {
-            let i = (i1 * n1 + i2 * n2) % n;
-            buffer[i1 * b + i2] = values[i];
-        }
+    for (i, b) in buffer.iter_mut().enumerate() {
+        *b = values[permute_i(i)];
     }
 
     buffer.chunks_exact_mut(b).for_each(small::ntt_5);
@@ -31,11 +45,8 @@ pub fn ntt_15(values: &mut [Field]) {
     buffer.chunks_exact_mut(a).for_each(small::ntt_3);
 
     // Output permutation.
-    for i1 in 0..a {
-        for i2 in 0..b {
-            let k = (i1 * m1 + i2 * m2) % n;
-            values[k] = buffer[i1 + i2 * a];
-        }
+    for (i, v) in buffer.iter().enumerate() {
+        values[permute_k(i)] = *v;
     }
 }
 
