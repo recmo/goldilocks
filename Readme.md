@@ -8,8 +8,10 @@ $$
 
 ## To do
 
-* [ ] Transpose for {1, 3} × 2^k.
-* Look into Rader FFT to turn prime sized FFTs into (p - 1) sized.
+* [ ] Optimize transpose.
+* [ ] Optimize twiddles in Cooley-Tukey.
+* [ ] Good-Thomas inmplementation.
+* [ ] Winograd NTT?
 
 ## Build run test bench
 

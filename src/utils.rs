@@ -28,6 +28,21 @@ pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
     r
 }
 
+/// Modular inverse.
+/// 
+/// Note that `m` is not necessarily prime.
+pub fn modinv(mut a: usize, m: usize) -> usize {
+    let (g, x, _) = egcd(a, m);
+    assert_eq!(g, 1);
+    let x = if x < 0 {
+        (x + m as isize) as usize
+    } else {
+        x as usize
+    };
+    debug_assert_eq!(a * x % m, 1);
+    x
+}
+
 /// Greatest common divisor.
 pub fn gcd(mut a: usize, mut b: usize) -> usize {
     if a == 0 {
@@ -49,6 +64,22 @@ pub fn gcd(mut a: usize, mut b: usize) -> usize {
         }
     }
     a << shift
+}
+
+pub fn egcd(a: usize, b: usize) -> (usize, isize, isize) {
+    let (mut r0, mut r1) = (a, b);
+    let (mut s0, mut s1) = (1, 0);
+    let (mut t0, mut t1) = (0, 1);
+    while r1 != 0 {
+        let q = r0 / r1;
+        r0 -= q * r1;
+        s0 -= (q as isize) * s1;
+        t0 -= (q as isize) * t1;
+        swap(&mut r0, &mut r1);
+        swap(&mut s0, &mut s1);
+        swap(&mut t0, &mut t1);
+    }
+    (r0 as usize, s0, t0)
 }
 
 /// Split a slice into two non-overlapping ranges.

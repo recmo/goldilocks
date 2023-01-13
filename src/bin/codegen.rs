@@ -36,8 +36,16 @@ fn ntt(vars: &mut [&str]) {
         2 => naive_2(vars),
         3 => naive_3(vars),
         5 => rader_5(vars),
-        15 => good_thomas(vars),
-        _ => cooley_tukey(vars),
+        n => {
+            let a = split(n);
+            let b = n / a;
+            assert!(a >= 2 && b >= 2);
+            if gcd(a, b) == 1 {
+                good_thomas(vars, (a, b));
+            } else {
+                cooley_tukey(vars, (a, b));
+            }
+        }
     }
 }
 
@@ -110,10 +118,8 @@ pub fn rader_5(vars: &mut [&str]) {
     swap(d, e);
 }
 
-fn cooley_tukey(vars: &mut [&str]) {
+fn cooley_tukey(vars: &mut [&str], (a, b): (usize, usize)) {
     let n = vars.len();
-    let a = split(n);
-    let b = n / a;
     assert_eq!(a * b, n);
     assert!(a >= 2 && b >= 2);
     // Interpret vars as a 2D array of size a x b
@@ -142,26 +148,23 @@ fn cooley_tukey(vars: &mut [&str]) {
     transpose_copy(vars, (a, b));
 }
 
-fn good_thomas(vars: &mut [&str]) {
-    debug_assert_eq!(vars.len(), 15);
+fn good_thomas(vars: &mut [&str], (a, b): (usize, usize)) {
+    let n = a * b;
+    debug_assert_eq!(vars.len(), n);
+    assert!(a >= 2 && b >= 2);
 
-    // Parameters
-    let n = 15;
-    let (a, b) = (3, 5);
-    let (n1, n2) = (5, 3);
-    let (m1, m2) = (10, 6);
-
+    let (k1, k2, k3, k4) = goldilocks_ntt::ntt::good_thomas::parameters(a, b);
     let permute_i = |i| {
         let (i1, i2) = (i / b, i % b);
-        (i1 * n1 + i2 * n2) % n
+        (i1 * k1 + i2 * k2) % n
     };
     let permute_k = |i| {
         let (i1, i2) = (i % a, i / a);
-        (i1 * m1 + i2 * m2) % n
+        (i1 * k3 + i2 * k4) % n
     };
 
     // Input permutation.
-    let mut buffer = [""; 15];
+    let mut buffer = vec![""; n];
     for (i, b) in buffer.iter_mut().enumerate() {
         *b = vars[permute_i(i)];
     }
