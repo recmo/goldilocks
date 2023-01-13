@@ -101,7 +101,7 @@ pub fn rader_5(vars: &mut [&str]) {
 pub fn generate(size: usize) {
     println!(
         r#"/// Size {size} NTT.
-fn ntt_{size}(values: &mut [Field]) {{
+pub fn ntt_{size}(values: &mut [Field]) {{
     debug_assert_eq!(values.len(), {size});"#
     );
 
@@ -235,7 +235,8 @@ mod tests {
         );
     }
 
-    println!(r#"}}
+    println!(
+        r#"}}
     
 #[cfg(feature = "bench")]
 #[doc(hidden)]
@@ -243,7 +244,8 @@ pub mod bench {{
     use super::{{super::bench::bench_ntt, *}};
     use criterion::Criterion;
 
-    pub fn group(criterion: &mut Criterion) {{"#);
+    pub fn group(criterion: &mut Criterion) {{"#
+    );
     for s in &sizes {
         println!("        bench_ntt(criterion, \"small\", ntt_{s}, {s});");
     }

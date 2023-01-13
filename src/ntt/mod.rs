@@ -7,6 +7,19 @@ pub mod small;
 use crate::Field;
 
 pub fn ntt(values: &mut [Field]) {
+    // Try an optimized small NTT.
+    if small::ntt(values) {
+        return;
+    }
+
+    // Use Rader for prime sizes. (2,3,5 are also covered by `small::ntt`.)
+    let n = values.len();
+    if n == 2 || n == 3 || n == 5 || n == 17 || n == 257 || n == 65537 {
+        rader::ntt(values);
+        return;
+    }
+
+    // Recurse using Cooley-Tukey.
     cooley_tukey::ntt(values);
 }
 
@@ -41,7 +54,9 @@ mod tests {
         let mut expected = values.clone();
         naive::ntt(&mut expected);
         f(&mut values);
-        assert_eq!(values, expected);
+        for (&value, expected) in values.iter().zip(expected) {
+            assert_eq!(value, expected);
+        }
     }
 }
 

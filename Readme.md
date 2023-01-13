@@ -1,5 +1,11 @@
 # Goldilocks-NTT
 
+Fast number theoretic transforms over the 64-bit Goldilocks prime field $\mathbb{F}_p$ with
+
+$$
+p = 2^{63} - 2^{32} + 1
+$$
+
 ## To do
 
 * [ ] Transpose for {1, 3} × 2^k.
@@ -20,6 +26,17 @@ Run Criterion benchmarks
 ```sh
 cargo bench --all-features --bench criterion
 ```
+
+Create a baseline
+
+```
+cargo bench --all-features --bench criterion -- --save-baseline main
+```
+
+```
+cargo bench --all-features --bench criterion -- --baseline-lenient main
+```
+
 
 Run NTT benchmarks
 
