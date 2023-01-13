@@ -44,3 +44,31 @@ mod tests {
         assert_eq!(values, expected);
     }
 }
+
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::*;
+    use criterion::{BenchmarkId, Criterion, Throughput};
+    use rand::{thread_rng, Rng};
+
+    pub fn group(criterion: &mut Criterion) {
+        small::bench::group(criterion);
+        rader::bench::group(criterion);
+    }
+
+    pub fn bench_ntt(
+        criterion: &mut Criterion,
+        name: &str,
+        ntt: impl Fn(&mut [Field]),
+        size: usize,
+    ) {
+        let mut rng = thread_rng();
+        let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut group = criterion.benchmark_group("ntt");
+        group.throughput(Throughput::Elements(size as u64));
+        group.bench_function(BenchmarkId::new(name, size), move |bencher| {
+            bencher.iter(|| ntt(&mut values));
+        });
+    }
+}

@@ -1,6 +1,11 @@
-use crate::Field;
-use crate::utils::modexp;
+use crate::{utils::modexp, Field};
 
+/// Rader NTT of prime size.
+///
+/// Reduces a NTT of size `n` to a cyclic convolution of size `n - 1`, which
+/// is computed with two NTTs of size `n - 1`. Since the prime factors of the
+/// Goldilocks multiplicative order are the Fermat primes, the NTTs will be
+/// 2^2^k sized, which is very efficient to compute.
 pub fn ntt(values: &mut [Field]) {
     let n = values.len();
 
@@ -36,7 +41,9 @@ pub fn ntt(values: &mut [Field]) {
     values[0] += buffer[0];
 
     // Apply twiddles
-    let mut twiddles = (0..n - 1).map(|i| Field::root(n as u64).unwrap().pow(pi(i) as u64)).collect::<Vec<_>>();
+    let mut twiddles = (0..n - 1)
+        .map(|i| Field::root(n as u64).unwrap().pow(pi(i) as u64))
+        .collect::<Vec<_>>();
     super::ntt(&mut twiddles);
 
     for i in 0..n - 1 {
@@ -205,5 +212,24 @@ mod tests {
     fn test_ntt_65537() {
         test_ntt_fn(ntt, 65537);
     }
+}
 
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::{super::bench::bench_ntt, *};
+    use criterion::Criterion;
+
+    pub fn group(criterion: &mut Criterion) {
+        bench_ntt(criterion, "rader", ntt, 2);
+        bench_ntt(criterion, "rader", ntt, 3);
+        bench_ntt(criterion, "rader", ntt, 5);
+        bench_ntt(criterion, "rader", ntt, 17);
+        bench_ntt(criterion, "rader", ntt, 257);
+        bench_ntt(criterion, "rader", ntt, 65537);
+
+        bench_ntt(criterion, "rader_specific", ntt_2, 2);
+        bench_ntt(criterion, "rader_specific", ntt_3, 3);
+        bench_ntt(criterion, "rader_specific", ntt_5, 5);
+    }
 }

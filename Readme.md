@@ -18,7 +18,7 @@ cargo doc --workspace --all-features --no-deps
 Run Criterion benchmarks
 
 ```sh
-cargo bench --bench criterion --features="criterion"
+cargo bench --all-features --bench criterion
 ```
 
 Run NTT benchmarks

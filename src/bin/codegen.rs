@@ -181,13 +181,8 @@ fn main() {
 )]
 use crate::Field;
 
-const R51: Field = Field::new(0x0e736627a0aeb983);
-const R52: Field = Field::new(0xdb8edc802dc0b266);
-const R53: Field = Field::new(0x02efb5c2a6f35241);
-const R54: Field = Field::new(0x130e07948a9d41d6);
-
 /// Apply a small NTT to `values`, or return `false` if the size is not supported.
-pub fn small_ntt(values: &mut [Field]) -> bool {
+pub fn ntt(values: &mut [Field]) -> bool {
     match values.len() {
         ..=1 => return true,"#
     );
@@ -218,41 +213,40 @@ pub fn small_ntt(values: &mut [Field]) -> bool {
         "{}{}{}",
         r#"#[cfg(test)]
 mod tests {
-    use super::{super::ntt_naive, *};
+    use super::{super::tests::test_ntt_fn, *};
 
     #[test]
     fn test_small_ntt() {
         for size in [0, 1, "#,
         size_list,
         r#"] {
-            let input = (0..size).map(Field::from).collect::<Vec<_>>();
-            let mut output = input.clone();
-            let supported = small_ntt(output.as_mut_slice());
-            assert!(supported);
-            let mut output_ref = input;
-            ntt_naive(output_ref.as_mut_slice());
-            assert_eq!(output, output_ref);
+            test_ntt_fn(|values| assert!(ntt(values)), size);
         }
-    }
-"#
+    }"#
     );
 
-    for s in sizes {
+    for s in &sizes {
         println!(
             r#"
     #[test]
     fn test_ntt_{s}() {{
-        let size = {s};
-        let input = (0..size).map(Field::from).collect::<Vec<_>>();
-        let mut output = input.clone();
-        ntt_{s}(output.as_mut_slice());
-        let mut output_ref = input;
-        ntt_naive(output_ref.as_mut_slice());
-        assert_eq!(output, output_ref);
-    }}
-"#
+        test_ntt_fn(ntt_{s}, {s});
+    }}"#
         );
     }
 
+    println!(r#"}}
+    
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {{
+    use super::{{super::bench::bench_ntt, *}};
+    use criterion::Criterion;
+
+    pub fn group(criterion: &mut Criterion) {{"#);
+    for s in &sizes {
+        println!("        bench_ntt(criterion, \"small\", ntt_{s}, {s});");
+    }
+    println!("    }}");
     println!("}}");
 }

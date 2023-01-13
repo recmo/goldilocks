@@ -1,4 +1,4 @@
-use super::small::small_ntt;
+use super::small;
 use crate::{divisors::split, ntt::naive, permute::gw18::transpose, Field};
 use rayon::prelude::*;
 
@@ -13,7 +13,7 @@ pub fn ntt(value: &mut [Field]) {
 
     // Try an optimized small NTT.
     if !cfg!(test) {
-        if small_ntt(value) {
+        if small::ntt(value) {
             return;
         }
     }
