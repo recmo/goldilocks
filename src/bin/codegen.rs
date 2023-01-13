@@ -30,6 +30,16 @@ fn mul_root_384(var: &str, exp: usize) -> String {
     }
 }
 
+fn ntt(vars: &mut [&str]) {
+    match vars.len() {
+        ..=1 => {},
+        2 => naive_2(vars),
+        3 => naive_3(vars),
+        5 => rader_5(vars),
+        _ => cooley_tukey(vars),
+    }
+}
+
 pub fn naive_2(vars: &mut [&str]) {
     let [a, b] = vars else { panic!() };
     println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
@@ -84,10 +94,11 @@ pub fn rader_5(vars: &mut [&str]) {
     println!("    let {b} = {b} + t;");
 
     // Transform back to complete the cyclic convolution.
+    swap(c, e); // Reverse (c,d,e) for inverse NTT.
     println!(
         r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
     let ({c}, {e}) = ({c} + {e}, {c} - {e});
-    let {e} = -({e} << 48);
+    let {e} = {e} << 48;
     let ({b}, {c}) = ({b} + {c}, {b} - {c});
     let ({d}, {e}) = ({d} + {e}, {d} - {e});"#
     );
@@ -96,6 +107,38 @@ pub fn rader_5(vars: &mut [&str]) {
     // Permute [b, c, d, e] back to original order.
     // let (b, c, d, e) = (b, c, e, d);
     swap(d, e);
+}
+
+fn cooley_tukey(vars: &mut [&str]) {
+    let n = vars.len();
+    let a = split(n);
+    let b = n / a;
+    assert_eq!(a * b, n);
+    assert!(a >= 2 && b >= 2);
+    // Interpret vars as a 2D array of size a x b
+    transpose_copy(vars, (a, b));
+    // Now vars is a 2D array of size b x a
+    vars.chunks_exact_mut(a).for_each(ntt);
+    for i in 1..b {
+        for j in 1..a {
+            let var = vars[i * a + j];
+            let exp = i * j;
+            let order = n;
+            let g = gcd(exp, order);
+            let (exp, order) = (exp / g, order / g);
+            if 384 % order == 0 {
+                let exp = exp * 384 / order;
+                println!("    let {var} = {};", mul_root_384(var, exp));
+            } else {
+                let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
+                println!("    let {var} = {var} * Field::new({omega});")
+            }
+        }
+    }
+    transpose_copy(vars, (b, a));
+    // Now vars is a 2D array of size a x b
+    vars.chunks_exact_mut(b).for_each(ntt);
+    transpose_copy(vars, (a, b));
 }
 
 pub fn generate(size: usize) {
@@ -113,47 +156,7 @@ pub fn ntt_{size}(values: &mut [Field]) {{
         println!("    let {a} = values[{i}];");
     }
 
-    fn recurse(vars: &mut [&str]) {
-        let n = vars.len();
-        if n == 2 {
-            naive_2(vars);
-        } else if n == 3 {
-            naive_3(vars);
-        } else if n == 5 {
-            rader_5(vars);
-        } else {
-            let a = split(n);
-            let b = n / a;
-            assert_eq!(a * b, n);
-            assert!(a >= 2 && b >= 2);
-            // Interpret vars as a 2D array of size a x b
-            transpose_copy(vars, (a, b));
-            // Now vars is a 2D array of size b x a
-            vars.chunks_exact_mut(a).for_each(recurse);
-            for i in 1..b {
-                for j in 1..a {
-                    let var = vars[i * a + j];
-                    let exp = i * j;
-                    let order = n;
-                    let g = gcd(exp, order);
-                    let (exp, order) = (exp / g, order / g);
-                    if 384 % order == 0 {
-                        let exp = exp * 384 / order;
-                        println!("    let {var} = {};", mul_root_384(var, exp));
-                    } else {
-                        let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
-                        println!("    let {var} = {var} * Field::new({omega});")
-                    }
-                }
-            }
-            transpose_copy(vars, (b, a));
-            // Now vars is a 2D array of size a x b
-            vars.chunks_exact_mut(b).for_each(recurse);
-            transpose_copy(vars, (a, b));
-        }
-    }
-
-    recurse(&mut vars);
+    ntt(&mut vars);
 
     // Generate writes
     for (i, a) in vars.iter().enumerate() {

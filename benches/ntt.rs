@@ -2,11 +2,7 @@ use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
-    ntt::{
-        ntt_naive,
-        recursive::{self, twiddle},
-        small::small_ntt,
-    },
+    ntt,
     ntt_old::Fft,
 };
 
@@ -14,7 +10,8 @@ use goldilocks_ntt::{
 enum Algorithm {
     Naive,
     Old,
-    Recursive,
+    New,
+    Inverse,
     Small,
     Twiddle,
 }
@@ -51,7 +48,7 @@ fn main() {
     for size in divisors()
         .iter()
         .map(|&n| n as usize)
-        .filter(|&n| is_smooth(n) && n > 1 && n < max_size)
+        .filter(|&n| n > 1 && n <= max_size)
     {
         let input = &mut input[..size];
 
@@ -61,7 +58,7 @@ fn main() {
 
         // Skip unsupported sizes
         let supported = match cli.algo {
-            Algorithm::Small => small_ntt(input),
+            Algorithm::Small => ntt::small::ntt(input),
             Algorithm::Old => input.len().is_power_of_two(),
             _ => true,
         };
@@ -71,11 +68,12 @@ fn main() {
 
         // Benchmark
         let duration = time(|| match cli.algo {
-            Algorithm::Naive => ntt_naive(input),
+            Algorithm::Naive => ntt::naive::ntt(input),
             Algorithm::Old => input.fft(),
-            Algorithm::Recursive => recursive::ntt(input),
-            Algorithm::Small => drop(small_ntt(input)),
-            Algorithm::Twiddle => twiddle(input, (a, b)),
+            Algorithm::New => ntt::ntt(input),
+            Algorithm::Inverse => ntt::intt(input),
+            Algorithm::Small => drop(ntt::small::ntt(input)),
+            Algorithm::Twiddle => ntt::cooley_tukey::twiddle(input, (a, b)),
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

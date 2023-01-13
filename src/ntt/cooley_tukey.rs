@@ -1,8 +1,7 @@
-use super::small;
 use crate::{divisors::split, permute::gw18::transpose, Field};
 use rayon::prelude::*;
 
-/// Cooley–Tukey Mixed-Radix "six-step" FFT algorithm.
+/// Cooley–Tukey $\sqrt{n}$ recursive NTT.
 pub fn ntt(values: &mut [Field]) {
     const PAR_THRESHOLD: usize = 1 << 15;
     let n = values.len();
