@@ -43,7 +43,7 @@ cargo bench --all-features --bench criterion -- --baseline-lenient main
 Run NTT benchmarks
 
 ```sh
-cargo bench --all-features --bench ntt -- recursive 32
+cargo bench --all-features --bench ntt -- ntt 32
 ```
 
 Check documentation coverage

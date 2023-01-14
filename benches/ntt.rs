@@ -10,7 +10,7 @@ use goldilocks_ntt::{
 enum Algorithm {
     Naive,
     Old,
-    New,
+    Ntt,
     Inverse,
     Small,
     Twiddle,
@@ -24,11 +24,11 @@ struct Args {
     bench: bool,
 
     /// Algorithm to test
-    #[arg(value_enum)]
+    #[arg(value_enum, default_value = "ntt")]
     algo: Algorithm,
 
     /// Log₂ of the maximum number of values to test
-    #[arg(default_value_t = 20)]
+    #[arg(default_value = "20")]
     max_exponent: usize,
 }
 
@@ -70,7 +70,7 @@ fn main() {
         let duration = time(|| match cli.algo {
             Algorithm::Naive => ntt::naive::ntt(input),
             Algorithm::Old => input.fft(),
-            Algorithm::New => ntt::ntt(input),
+            Algorithm::Ntt => ntt::ntt(input),
             Algorithm::Inverse => ntt::intt(input),
             Algorithm::Small => drop(ntt::small::ntt(input)),
             Algorithm::Twiddle => ntt::cooley_tukey::twiddle(input, (a, b)),

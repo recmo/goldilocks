@@ -1,9 +1,8 @@
-use std::mem::swap;
-
+use std::mem::{swap};
 use goldilocks_ntt::{
     divisors::{divisors, is_smooth, split},
     permute::transpose_copy,
-    utils::gcd,
+    utils::{gcd, modexp},
     Field,
 };
 
@@ -35,7 +34,7 @@ fn ntt(vars: &mut [&str]) {
         ..=1 => {},
         2 => naive_2(vars),
         3 => naive_3(vars),
-        5 => rader_5(vars),
+        5 | 17 | 257 | 65537 => rader(vars),
         n => {
             let a = split(n);
             let b = n / a;
@@ -61,61 +60,47 @@ pub fn naive_3(vars: &mut [&str]) {
     println!("        {a} - ({b} << 32) + ({c} << 64));");
 }
 
-pub fn rader_5(vars: &mut [&str]) {
-    let [a, b, c, d, e] = vars else { panic!() };
+fn rader(vars: &mut [&str]) {
+    let n = vars.len();
 
-    // Permute [b, c, d, e] to make the remaining DFT matrix cyclic.
-    // let (b, c, d, e) = (b, d, e, c);
-    let t = *c;
-    *c = d;
-    *d = e;
-    *e = t;
+    // Construct permutations.
+    let (gi, gk) = goldilocks_ntt::ntt::rader::parameters(n);
+    let pi = |i| modexp(gi, i, n);
+    let pk = |i| modexp(gk, i, n);
 
-    // Transform [b, c, d, e] for cyclic convolution.
-    println!(
-        r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
-    let ({c}, {e}) = ({c} + {e}, {c} - {e});
-    let {e} = {e} << 48;
-    let ({b}, {c}) = ({b} + {c}, {b} - {c});
-    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#
-    );
-    // let (b, c, d, e) = (b, d, c, e);
-    swap(c, d);
+    // Permute input
+    let mut buffer = vec![""; n - 1];
+    for i in 0..n - 1 {
+        buffer[i] = vars[pk(i)];
+    }
 
-    // Add `b` (which is now the sum of b..=e to `a`, keeping a copy of `a` in `t`.
-    println!(
-        r#"    let t = {a};
-    let {a} = {a} + {b};"#
-    );
+    // Transform using n-1 sized transform
+    ntt(&mut buffer);
 
-    // Multiply by the NTT transform of [ω ω² ω⁴ ω³],
-    // Also includes 1/4 scaling factor for the inverse transform.
-    println!(
-        r#"    let {b} = {b} * Field::new(4611686017353646080);
-    let {c} = {c} * Field::new(16181989089180173841);
-    let {d} = {d} * Field::new(5818851782451133869);
-    let {e} = {e} * Field::new(11322249509082494407);"#
-    );
-    // At this point `b` sums all the other terms.
+    // Add `values[1..].sum()` to `value[0]`. `buffer[0]` conveniently contains
+    // this sum after the NTT.
+    println!("    let t = {};", vars[0]);
+    println!("    let {} = {} + {};", vars[0], vars[0], buffer[0]);
 
-    // We add `t` to the constant term, so it adds to all the other terms after
-    // inverse transform.
-    println!("    let {b} = {b} + t;");
+    // Apply twiddles
+    let twiddles = goldilocks_ntt::ntt::rader::twiddles(n, pi);
+    for (i, t) in twiddles.iter().enumerate() {
+        let v = buffer[i];
+        println!("    let {v} = {v} * Field::new({t});");
+    }
 
-    // Transform back to complete the cyclic convolution.
-    swap(c, e); // Reverse (c,d,e) for inverse NTT.
-    println!(
-        r#"    let ({b}, {d}) = ({b} + {d}, {b} - {d});
-    let ({c}, {e}) = ({c} + {e}, {c} - {e});
-    let {e} = {e} << 48;
-    let ({b}, {c}) = ({b} + {c}, {b} - {c});
-    let ({d}, {e}) = ({d} + {e}, {d} - {e});"#
-    );
-    swap(c, d);
+    // Add x0 to all `values[1..]` terms by adding to the constant term before INTT.
+    println!("    let {} = {} + t;", buffer[0], buffer[0]);
 
-    // Permute [b, c, d, e] back to original order.
-    // let (b, c, d, e) = (b, c, e, d);
-    swap(d, e);
+    // Transform back
+    buffer[1..].reverse();
+    ntt(&mut buffer);
+
+    // Permute into results
+    for i in 0..n - 1 {
+        vars[pi(i)] = buffer[i];
+    }
+
 }
 
 fn cooley_tukey(vars: &mut [&str], (a, b): (usize, usize)) {
@@ -207,7 +192,7 @@ fn main() {
     let sizes = divisors()
         .iter()
         .map(|n| *n as usize)
-        .filter(|&s| is_smooth(s) && s >= 2 && s <= 256)
+        .filter(|&s| s >= 2 && s <= 128)
         .collect::<Vec<_>>();
 
     // Generate header and dispatch function

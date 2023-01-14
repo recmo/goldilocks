@@ -30,12 +30,9 @@ pub fn ntt(values: &mut [Field]) {
     }
 }
 
-pub fn generic(values: &mut [Field]) {
-    let n = values.len();
-
-    // Lookup generator pairs for all factors.
+/// Parameters for the Rader permutation.
+pub fn parameters(n: usize) -> (usize, usize) {
     let (gi, gk): (usize, usize) = match n {
-        ..=1 => return,
         2 => (1, 1),
         3 => (2, 2),
         5 => (2, 3),
@@ -47,6 +44,25 @@ pub fn generic(values: &mut [Field]) {
     debug_assert_eq!((gi * gk) % n, 1);
     debug_assert_eq!(modexp(gi, n / 2, n), n - 1);
     debug_assert_eq!(modexp(gk, n / 2, n), n - 1);
+    (gi, gk)
+}
+
+/// Twiddle factors for the Rader NTT.
+pub fn twiddles(n: usize, p: impl Fn(usize) -> usize) -> Vec<Field> {
+    let root = Field::root(n as u64).unwrap();
+    let scale = Field::new((n - 1) as u64).inv();
+    let mut twiddles = (0..n - 1)
+        .map(|i| root.pow(p(i) as u64) * scale)
+        .collect::<Vec<_>>();
+    super::ntt(&mut twiddles);
+    twiddles
+}
+
+pub fn generic(values: &mut [Field]) {
+    let n = values.len();
+
+    // Lookup generator pairs for all factors.
+    let (gi, gk) = parameters(n);
 
     // Construct permutations.
     let pi = |i| modexp(gi, i, n);
@@ -67,21 +83,18 @@ pub fn generic(values: &mut [Field]) {
     values[0] += buffer[0];
 
     // Apply twiddles
-    let root = Field::root(n as u64).unwrap();
-    let mut twiddles = (0..n - 1)
-        .map(|i| root.pow(pi(i) as u64))
-        .collect::<Vec<_>>();
-    super::ntt(&mut twiddles);
+    let twiddles = twiddles(n, pi);
 
     for i in 0..n - 1 {
         buffer[i] *= twiddles[i];
     }
 
     // Add x0 to all `values[1..]` terms by adding to the constant term before INTT.
-    buffer[0] += x0 * Field::from(n as u64 - 1);
+    buffer[0] += x0;
 
     // Transform back
-    super::intt(&mut buffer);
+    buffer[1..].reverse();
+    super::ntt(&mut buffer);
 
     // Permute into results
     for i in 0..n - 1 {

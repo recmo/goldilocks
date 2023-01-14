@@ -3,7 +3,6 @@
 //! See <https://amir.sdsu.edu/Bhagat18High.pdf>
 use crate::Field;
 use crate::divisors::split;
-use crate::ntt::small;
 use crate::permute::gw18::transpose;
 use crate::utils::{gcd, modinv};
 
