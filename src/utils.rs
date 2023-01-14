@@ -29,9 +29,9 @@ pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
 }
 
 /// Modular inverse.
-/// 
+///
 /// Note that `m` is not necessarily prime.
-pub fn modinv(mut a: usize, m: usize) -> usize {
+pub fn modinv(a: usize, m: usize) -> usize {
     let (g, x, _) = egcd(a, m);
     assert_eq!(g, 1);
     let x = if x < 0 {

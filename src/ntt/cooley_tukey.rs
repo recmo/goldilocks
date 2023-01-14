@@ -23,10 +23,22 @@ pub fn ntt(values: &mut [Field]) {
 /// Cooley-Tukey six-step NTT.
 pub fn recurse(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize, usize)) {
     debug_assert_eq!(value.len(), a * b);
+    let root = Field::root(value.len() as u64)
+        .expect("Vector length does not divide multiplicative group order.");
 
     transpose(value, (a, b));
-    value.chunks_exact_mut(a).for_each(&inner);
-    twiddle(value, (b, a)); // Opt: merge with previous.
+    let mut omega_col = root;
+    value.chunks_exact_mut(a).enumerate().for_each(|(i, row)| {
+        inner(row);
+        if i > 0 {
+            let mut omega_row = omega_col;
+            for value in row.iter_mut().skip(1) {
+                *value *= omega_row;
+                omega_row *= omega_col;
+            }
+            omega_col *= root;
+        }
+    });
     transpose(value, (b, a));
     value.chunks_exact_mut(b).for_each(&inner);
     transpose(value, (a, b));
@@ -39,10 +51,26 @@ pub fn par_recurse(
     (a, b): (usize, usize),
 ) {
     debug_assert_eq!(value.len(), a * b);
+    let root = Field::root(value.len() as u64)
+        .expect("Vector length does not divide multiplicative group order.");
 
     transpose(value, (a, b));
-    value.par_chunks_exact_mut(a).for_each(&inner);
-    twiddle(value, (b, a)); // Opt: merge with previous.
+
+    value
+        .par_chunks_exact_mut(a)
+        .enumerate()
+        .for_each_with(None, |omega_col, (row, values)| {
+            inner(values);
+            if row > 0 {
+                let omega_col = omega_col.get_or_insert_with(|| root.pow(row as u64));
+                let mut omega_row = *omega_col;
+                for value in values.iter_mut().skip(1) {
+                    *value *= omega_row;
+                    omega_row *= *omega_col;
+                }
+                *omega_col *= root;
+            }
+        });
     transpose(value, (b, a));
     value.par_chunks_exact_mut(b).for_each(&inner);
     transpose(value, (a, b));
@@ -50,9 +78,9 @@ pub fn par_recurse(
 
 pub fn twiddle(value: &mut [Field], (rows, cols): (usize, usize)) {
     assert_eq!(value.len(), rows * cols);
-
     let root = Field::root(value.len() as u64)
         .expect("Vector length does not divide multiplicative group order.");
+
     debug_assert_eq!(root.pow((value.len() / 2) as u64), -Field::from(1));
     debug_assert_eq!(root.pow(value.len() as u64), Field::from(1));
 
@@ -108,5 +136,15 @@ mod tests {
     #[test]
     fn test_recurse_256_4_64() {
         test_ntt_fn(|values| recurse(values, naive::ntt, (4, 64)), 256);
+    }
+
+    #[test]
+    fn test_par_recurse_256_16_16() {
+        test_ntt_fn(|values| par_recurse(values, naive::ntt, (16, 16)), 256);
+    }
+
+    #[test]
+    fn test_par_recurse_256_4_64() {
+        test_ntt_fn(|values| par_recurse(values, naive::ntt, (4, 64)), 256);
     }
 }

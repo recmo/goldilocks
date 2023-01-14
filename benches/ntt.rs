@@ -3,7 +3,7 @@ use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
     ntt,
-    ntt_old::Fft,
+    ntt_old::Fft, permute,
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -13,7 +13,7 @@ enum Algorithm {
     Ntt,
     Inverse,
     Small,
-    Twiddle,
+    Transpose,
 }
 
 #[derive(Parser, Debug)]
@@ -26,6 +26,10 @@ struct Args {
     /// Algorithm to test
     #[arg(value_enum, default_value = "ntt")]
     algo: Algorithm,
+
+    /// Test on all supported numbers instead of just the smooth ones.
+    #[arg(long)]
+    all: bool,
 
     /// Log₂ of the maximum number of values to test
     #[arg(default_value = "20")]
@@ -48,7 +52,7 @@ fn main() {
     for size in divisors()
         .iter()
         .map(|&n| n as usize)
-        .filter(|&n| n > 1 && n <= max_size)
+        .filter(|&n| n > 1 && n <= max_size && (cli.all || is_smooth(n)))
     {
         let input = &mut input[..size];
 
@@ -73,7 +77,7 @@ fn main() {
             Algorithm::Ntt => ntt::ntt(input),
             Algorithm::Inverse => ntt::intt(input),
             Algorithm::Small => drop(ntt::small::ntt(input)),
-            Algorithm::Twiddle => ntt::cooley_tukey::twiddle(input, (a, b)),
+            Algorithm::Transpose => permute::transpose(input, (a, b)),
         });
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");

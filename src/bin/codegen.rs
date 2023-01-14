@@ -1,6 +1,5 @@
-use std::mem::{swap};
 use goldilocks_ntt::{
-    divisors::{divisors, is_smooth, split},
+    divisors::{divisors, split},
     permute::transpose_copy,
     utils::{gcd, modexp},
     Field,
@@ -31,7 +30,7 @@ fn mul_root_384(var: &str, exp: usize) -> String {
 
 fn ntt(vars: &mut [&str]) {
     match vars.len() {
-        ..=1 => {},
+        ..=1 => {}
         2 => naive_2(vars),
         3 => naive_3(vars),
         5 | 17 | 257 | 65537 => rader(vars),
@@ -100,7 +99,6 @@ fn rader(vars: &mut [&str]) {
     for i in 0..n - 1 {
         vars[pi(i)] = buffer[i];
     }
-
 }
 
 fn cooley_tukey(vars: &mut [&str], (a, b): (usize, usize)) {
@@ -153,7 +151,7 @@ fn good_thomas(vars: &mut [&str], (a, b): (usize, usize)) {
     for (i, b) in buffer.iter_mut().enumerate() {
         *b = vars[permute_i(i)];
     }
-    
+
     buffer.chunks_exact_mut(b).for_each(ntt);
     transpose_copy(&mut buffer, (a, b));
     buffer.chunks_exact_mut(a).for_each(ntt);
@@ -193,6 +191,7 @@ fn main() {
         .iter()
         .map(|n| *n as usize)
         .filter(|&s| s >= 2 && s <= 128)
+        .filter(|&s| s != 102) // This one crashes rustc
         .collect::<Vec<_>>();
 
     // Generate header and dispatch function

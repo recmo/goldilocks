@@ -1,10 +1,14 @@
 //! The Good-Thomas or Prime Factor FFT algorithm.
 //!
-//! See <https://amir.sdsu.edu/Bhagat18High.pdf>
-use crate::Field;
-use crate::divisors::split;
-use crate::permute::gw18::transpose;
-use crate::utils::{gcd, modinv};
+//! If the length of the input is smooth then this method won't be used
+//! directly, but only as part of the codelets, as there wil allways be a factor
+//! 2 in the split.
+use crate::{
+    divisors::split,
+    permute::gw18::transpose,
+    utils::{gcd, modinv},
+    Field,
+};
 
 // TODO: Use a mapping that avoids modulo operations.
 
@@ -12,7 +16,11 @@ pub fn ntt(values: &mut [Field]) {
     let n1 = split(values.len());
     debug_assert!(n1 > 1, "Good-Thomas requires length to be composite");
     let n2 = values.len() / n1;
-    debug_assert_eq!(gcd(n1, n2), 1, "Good-Thomas requires n1 and n2 to be coprime");
+    debug_assert_eq!(
+        gcd(n1, n2),
+        1,
+        "Good-Thomas requires n1 and n2 to be coprime"
+    );
     recurse(values, super::ntt, (n1, n2));
 }
 

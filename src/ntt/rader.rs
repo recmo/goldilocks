@@ -307,7 +307,9 @@ pub fn ntt_257(values: &mut [Field]) {
     super::ntt(&mut buffer);
 
     // Permute into results
-    pi.iter().zip(buffer.iter()).for_each(|(&i, &b)| values[i] = b);
+    pi.iter()
+        .zip(buffer.iter())
+        .for_each(|(&i, &b)| values[i] = b);
 }
 
 pub fn ntt_65537(values: &mut [Field]) {
@@ -349,7 +351,9 @@ pub fn ntt_65537(values: &mut [Field]) {
     super::ntt(&mut buffer);
 
     // Permute into results
-    pi.iter().zip(buffer.iter()).for_each(|(&i, &b)| values[i] = b);
+    pi.iter()
+        .zip(buffer.iter())
+        .for_each(|(&i, &b)| values[i] = b);
 }
 
 #[cfg(test)]
