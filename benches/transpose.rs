@@ -3,7 +3,7 @@ use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
     ntt_old::transpose_square_stretch,
-    permute::{gw18, transpose, transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
+    permute::{gw18_old, transpose, transpose_copy_ro, transpose_copy_wo, transpose_square_pub},
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -79,7 +79,7 @@ fn main() {
                 transpose::ip_transpose(input, w.as_mut_slice(), a, b);
             }
             Algorithm::Gw18 => {
-                gw18::transpose(input, (a, b));
+                gw18_old::transpose(input, (a, b));
             }
         });
         let throughput = (size as f64) / duration;

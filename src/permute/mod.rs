@@ -1,7 +1,7 @@
 // mod inner_block;
 mod copy;
 // mod cyclic;
-pub mod gw18;
+pub mod gw18_old;
 pub mod permutation;
 mod square;
 

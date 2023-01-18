@@ -23,6 +23,10 @@ cargo test --workspace --all-features --all-targets -- --nocapture &&\
 cargo doc --workspace --all-features --no-deps
 ```
 
+```
+cargo test --all-features -- --test-threads 1 --nocapture
+```
+
 Run Criterion benchmarks
 
 ```sh
@@ -54,6 +58,18 @@ RUSTDOCFLAGS="-Z unstable-options --show-coverage"  cargo doc --workspace --all-
 
 ```
 cargo run --bin codegen > small.rs && mv small.rs src/ntt && cargo test ntt::small
+```
+
+Inspect assembly using [cargo-show-asm]
+
+[cargo-show-asm]: https://crates.io/crates/cargo-show-asm
+
+```
+cargo asm --lib -p goldilocks-ntt "ntt::small::ntt_2" 0
+```
+
+```
+RUSTFLAGS="-Awarnings" cargo asm --lib --all-features --native --simplify -p goldilocks-ntt --rust "field::algo::generic::mul_redc_2"
 ```
 
 ## See also

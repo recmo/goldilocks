@@ -84,6 +84,7 @@ fn transpose_square_2<T>(matrix: &mut [T], size: usize) {
     }
 }
 
+#[allow(dead_code)]
 fn transpose_naive<T>(matrix: &mut [T], size: usize) {
     for row in (0..size).step_by(2) {
         let i = row * size + row;
@@ -116,6 +117,7 @@ fn transpose_naive<T>(matrix: &mut [T], size: usize) {
 /// [ C D ]  =  [ Bᵀ Dᵀ ]
 ///
 /// <https://en.algorithmica.org/hpc/external-memory/oblivious/#matrix-transposition>
+#[allow(dead_code)]
 fn recurse<T>(a: &mut [T], n: usize, N: usize) {
     if n <= 32 {
         // Base case
@@ -145,6 +147,7 @@ fn recurse<T>(a: &mut [T], n: usize, N: usize) {
     }
 }
 
+#[allow(dead_code)]
 pub fn tiled<T>(a: &mut [T], n: usize) {
     use std::ptr::swap_nonoverlapping;
     const TILE_SIZE: usize = 16;

@@ -1,14 +1,28 @@
 use core::mem::swap;
 use std::ops::Range;
 
-// Force the compiler to generate a branch instruction instead of conditionals.
-// Trick from [plonky2].
-//
-// [plonky2]: https://github.com/mir-protocol/plonky2/blob/d90a0559297366e1e2390cff9e3d1d5cf53875b7/util/src/lib.rs#L263-L287
+/// Force the compiler to generate a branch instruction instead of conditionals.
+/// Trick from [plonky2].
+///
+/// [plonky2]: https://github.com/mir-protocol/plonky2/blob/d90a0559297366e1e2390cff9e3d1d5cf53875b7/util/src/lib.rs#L263-L287
 #[inline(always)]
 pub fn branch_hint() {
     unsafe {
         core::arch::asm!("", options(nomem, nostack, preserves_flags));
+    }
+}
+
+/// Force the compiler to assume a predicate is true.
+/// Trick from [plonky2].
+///
+/// [plonky2]: https://github.com/mir-protocol/plonky2/blob/3a6d693f3ffe5aa1636e0066a4ea4885a10b5cdf/util/src/lib.rs#L253-L261
+#[inline(always)]
+pub fn assume(p: bool) {
+    debug_assert!(p);
+    if !p {
+        unsafe {
+            core::hint::unreachable_unchecked();
+        }
     }
 }
 
