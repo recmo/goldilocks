@@ -8,7 +8,7 @@ use goldilocks_ntt::{
 fn shift(var: &str, count: usize) -> String {
     let count = count % 192;
     if count == 0 {
-        format!("{var}")
+        var.to_string()
     } else if count < 96 {
         format!("({var} << {count})")
     } else {
@@ -190,14 +190,13 @@ fn main() {
     let sizes = divisors()
         .iter()
         .map(|n| *n as usize)
-        .filter(|&s| s >= 2 && s <= 128)
+        .filter(|&s| (2..=128).contains(&s))
         .filter(|&s| s != 102) // This one crashes rustc
         .collect::<Vec<_>>();
 
     // Generate header and dispatch function
     println!(
-        "{}",
-        r#"//! Generated using `cargo run --bin codegen`
+        "//! Generated using `cargo run --bin codegen`
 #![allow(
     unused_parens,
     clippy::similar_names,
@@ -207,20 +206,19 @@ fn main() {
 use crate::Field;
 
 /// Apply a small NTT to `values`, or return `false` if the size is not supported.
-pub fn ntt(values: &mut [Field]) -> bool {
-    match values.len() {
-        ..=1 => return true,"#
+pub fn ntt(values: &mut [Field]) -> bool {{
+    match values.len() {{
+        ..=1 => return true,"
     );
     for s in &sizes {
         println!("        {s} => ntt_{s}(values),");
     }
     println!(
-        "{}",
-        r#"        _ => return false,
-    }
+        "        _ => return false,
+    }}
     true
-}
-"#
+}}
+"
     );
 
     // Generate the NTTs
@@ -235,19 +233,16 @@ pub fn ntt(values: &mut [Field]) -> bool {
         .collect::<Vec<_>>()
         .join(", ");
     println!(
-        "{}{}{}",
-        r#"#[cfg(test)]
-mod tests {
-    use super::{super::tests::test_ntt_fn, *};
+        "#[cfg(test)]
+mod tests {{
+    use super::{{super::tests::test_ntt_fn, *}};
 
     #[test]
-    fn test_small_ntt() {
-        for size in [0, 1, "#,
-        size_list,
-        r#"] {
+    fn test_small_ntt() {{
+        for size in [0, 1, {size_list}] {{
             test_ntt_fn(|values| assert!(ntt(values)), size);
-        }
-    }"#
+        }}
+    }}"
     );
 
     for s in &sizes {

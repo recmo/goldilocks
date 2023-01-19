@@ -63,7 +63,6 @@ fn main() {
         // Skip unsupported sizes
         let supported = match cli.algo {
             Algorithm::Small => ntt::small::ntt(input),
-            Algorithm::Old => input.len().is_power_of_two(),
             Algorithm::Winter => input.len().is_power_of_two(),
             _ => true,
         };

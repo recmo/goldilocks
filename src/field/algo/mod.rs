@@ -30,7 +30,7 @@ mod test {
             prop_assume!(a < MODULUS);
             prop_assume!(b < MODULUS);
             let value = add(a, b);
-            let expected = ((a as u128) + (b as u128)).rem_euclid(MODULUS as u128) as u64;
+            let expected = (u128::from(a) + u128::from(b)).rem_euclid(u128::from(MODULUS)) as u64;
             assert_eq!(value, expected);
         });
     }
@@ -41,7 +41,7 @@ mod test {
             prop_assume!(a < MODULUS);
             prop_assume!(b < MODULUS);
             let value = sub(a, b);
-            let expected = ((a as i128) - (b as i128)).rem_euclid(MODULUS as i128) as u64;
+            let expected = (i128::from(a) - i128::from(b)).rem_euclid(i128::from(MODULUS)) as u64;
             assert_eq!(value, expected);
         });
     }
@@ -52,7 +52,7 @@ mod test {
             prop_assume!(a < MODULUS);
             prop_assume!(b < MODULUS);
             let value = mul(a, b);
-            let expected = ((a as u128) * (b as u128)).rem_euclid(MODULUS as u128) as u64;
+            let expected = (u128::from(a) * u128::from(b)).rem_euclid(u128::from(MODULUS)) as u64;
             assert_eq!(value, expected);
         });
     }
@@ -234,11 +234,13 @@ pub mod bench {
         bench_unary(criterion, "shift/64", |a| shift(a, 64));
     }
 
+    #[must_use]
     pub fn rand() -> u64 {
         let mut rng = thread_rng();
         rng.gen::<u64>() % MODULUS
     }
 
+    #[must_use]
     pub fn rand_n<const N: usize>() -> [u64; N] {
         let mut rng = thread_rng();
         let mut a = [0u64; N];

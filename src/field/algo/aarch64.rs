@@ -2,6 +2,7 @@
 // and shift.
 
 #[inline(always)]
+#[must_use]
 pub fn add(a: u64, b: u64) -> u64 {
     let r: u64;
     let c: u64;
@@ -21,6 +22,7 @@ pub fn add(a: u64, b: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn sub(a: u64, b: u64) -> u64 {
     let r: u64;
     let c: u64;

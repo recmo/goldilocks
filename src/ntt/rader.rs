@@ -19,7 +19,7 @@ static RADER_65537_INIT: Once = Once::new();
 /// 2^2^k sized, which is very efficient to compute.
 pub fn ntt(values: &mut [Field]) {
     match values.len() {
-        ..=1 => return,
+        ..=1 => (),
         2 => ntt_2(values),
         3 => ntt_3(values),
         5 => ntt_5(values),
@@ -31,6 +31,7 @@ pub fn ntt(values: &mut [Field]) {
 }
 
 /// Parameters for the Rader permutation.
+#[must_use]
 pub fn parameters(n: usize) -> (usize, usize) {
     let (gi, gk): (usize, usize) = match n {
         2 => (1, 1),
@@ -184,10 +185,10 @@ pub fn ntt_5(values: &mut [Field]) {
 
     // Point multiply by the NTT transform of [ω ω² ω⁴ ω³],
     // Also includes 1/4 scaling factor for the inverse transform.
-    let b = b * Field::new(4611686017353646080);
-    let c = c * Field::new(16181989089180173841);
-    let d = d * Field::new(5818851782451133869);
-    let e = e * Field::new(11322249509082494407);
+    let b = b * Field::new(4_611_686_017_353_646_080);
+    let c = c * Field::new(16_181_989_089_180_173_841);
+    let d = d * Field::new(5_818_851_782_451_133_869);
+    let e = e * Field::new(11_322_249_509_082_494_407);
 
     // We add `x₀` to the constant term (unscaled).
     let b = b + t;
@@ -227,23 +228,23 @@ pub fn ntt_17(values: &mut [Field]) {
     // Apply constants, twiddles and scaling factors.
     let a = values[0];
     values[0] += buffer[0];
-    buffer[0] *= Field::new(1152921504338411520);
+    buffer[0] *= Field::new(1_152_921_504_338_411_520);
     buffer[0] += a;
-    buffer[1] *= Field::new(6259776822214049175);
-    buffer[2] *= Field::new(9380094172986290191);
-    buffer[3] *= Field::new(891943630314919127);
-    buffer[4] *= Field::new(17228171707553225791);
-    buffer[5] *= Field::new(12855743360534130886);
-    buffer[6] *= Field::new(6167687396920564837);
-    buffer[7] *= Field::new(17201834061724655524);
-    buffer[8] *= Field::new(15308299771656910737);
-    buffer[9] *= Field::new(18186005861103657533);
-    buffer[10] *= Field::new(53595491891823545);
-    buffer[11] *= Field::new(1906638201581172103);
-    buffer[12] *= Field::new(18303651001328874822);
-    buffer[13] *= Field::new(3077466521755967626);
-    buffer[14] *= Field::new(12423593102987598328);
-    buffer[15] *= Field::new(18361513053649472048);
+    buffer[1] *= Field::new(6_259_776_822_214_049_175);
+    buffer[2] *= Field::new(9_380_094_172_986_290_191);
+    buffer[3] *= Field::new(891_943_630_314_919_127);
+    buffer[4] *= Field::new(17_228_171_707_553_225_791);
+    buffer[5] *= Field::new(12_855_743_360_534_130_886);
+    buffer[6] *= Field::new(6_167_687_396_920_564_837);
+    buffer[7] *= Field::new(17_201_834_061_724_655_524);
+    buffer[8] *= Field::new(15_308_299_771_656_910_737);
+    buffer[9] *= Field::new(18_186_005_861_103_657_533);
+    buffer[10] *= Field::new(53_595_491_891_823_545);
+    buffer[11] *= Field::new(1_906_638_201_581_172_103);
+    buffer[12] *= Field::new(18_303_651_001_328_874_822);
+    buffer[13] *= Field::new(3_077_466_521_755_967_626);
+    buffer[14] *= Field::new(12_423_593_102_987_598_328);
+    buffer[15] *= Field::new(18_361_513_053_649_472_048);
 
     // inverse NTT to complete the convolution.
     buffer[1..].reverse();

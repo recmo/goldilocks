@@ -55,6 +55,7 @@ pub fn recurse(values: &mut [Field], inner: impl Fn(&mut [Field]), (n1, n2): (us
     }
 }
 
+#[must_use]
 pub fn parameters(n1: usize, n2: usize) -> (usize, usize, usize, usize) {
     let n = n1 * n2;
     debug_assert_eq!(gcd(n1, n2), 1);

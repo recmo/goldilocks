@@ -8,9 +8,7 @@ pub fn ntt(values: &mut [Field]) {
 
     // Interpret `values` as an approximately square matrix.
     let a = split(n);
-    if a <= 1 {
-        panic!("Unimplemented Cooley-Tukey split for for {}", n);
-    }
+    assert!(a > 1, "Unimplemented Cooley-Tukey split for for {n}");
     let b = n / a;
 
     if n < PAR_THRESHOLD {

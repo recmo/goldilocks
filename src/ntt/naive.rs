@@ -71,7 +71,7 @@ mod tests {
         let mut expected = values.clone();
         values[1..].reverse();
         ntt(&mut values);
-        for x in values.iter_mut() {
+        for x in &mut values {
             *x *= Field::from(size as u64).inv();
         }
         intt(&mut expected);

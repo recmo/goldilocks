@@ -26,6 +26,7 @@ pub fn assume(p: bool) {
     }
 }
 
+#[must_use]
 pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
     assert!(m > 0);
     assert!(m < 1 << (usize::BITS / 2), "modulus is too large");
@@ -37,7 +38,7 @@ pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
             r = (r * a) % m;
         }
         a = (a * a) % m;
-        e = e >> 1;
+        e >>= 1;
     }
     r
 }
@@ -45,6 +46,7 @@ pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
 /// Modular inverse.
 ///
 /// Note that `m` is not necessarily prime.
+#[must_use]
 pub fn modinv(a: usize, m: usize) -> usize {
     let (g, x, _) = egcd(a, m);
     assert_eq!(g, 1);
@@ -58,6 +60,7 @@ pub fn modinv(a: usize, m: usize) -> usize {
 }
 
 /// Greatest common divisor.
+#[must_use]
 pub fn gcd(mut a: usize, mut b: usize) -> usize {
     if a == 0 {
         return b;
@@ -80,6 +83,7 @@ pub fn gcd(mut a: usize, mut b: usize) -> usize {
     a << shift
 }
 
+#[must_use]
 pub fn egcd(a: usize, b: usize) -> (usize, isize, isize) {
     let (mut r0, mut r1) = (a, b);
     let (mut s0, mut s1) = (1, 0);
@@ -93,7 +97,7 @@ pub fn egcd(a: usize, b: usize) -> (usize, isize, isize) {
         swap(&mut s0, &mut s1);
         swap(&mut t0, &mut t1);
     }
-    (r0 as usize, s0, t0)
+    (r0, s0, t0)
 }
 
 /// Split a slice into two non-overlapping ranges.

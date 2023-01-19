@@ -18,6 +18,7 @@ impl Field {
 }
 
 impl Field {
+    #[must_use]
     pub const fn new(value: u64) -> Self {
         assert!(value < Self::MODULUS);
         let value = (((value as u128) * (algo::MONT_R1 as u128)) % (Self::MODULUS as u128)) as u64;

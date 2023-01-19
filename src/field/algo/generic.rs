@@ -15,6 +15,7 @@ use core::mem::swap;
 ///
 /// Requires `a` and `b` to be reduced.
 #[inline(always)]
+#[must_use]
 pub fn add(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
@@ -28,6 +29,7 @@ pub fn add(a: u64, b: u64) -> u64 {
 ///
 /// Requires `a` and `b` to be reduced.
 #[inline(always)]
+#[must_use]
 pub fn sub(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
@@ -38,6 +40,7 @@ pub fn sub(a: u64, b: u64) -> u64 {
 
 /// Multiplies two field elements.
 #[inline(always)]
+#[must_use]
 pub fn mul(a: u64, b: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(b < MODULUS);
@@ -45,12 +48,14 @@ pub fn mul(a: u64, b: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn mont_mul(a: u64, b: u64) -> u64 {
     mont_reduce_128((a as u128) * (b as u128))
 }
 
 /// Reduce a `u64`
 #[inline(always)]
+#[must_use]
 pub const fn reduce_64(mut n: u64) -> u64 {
     if n > MODULUS {
         n -= MODULUS;
@@ -60,6 +65,7 @@ pub const fn reduce_64(mut n: u64) -> u64 {
 
 /// Reduce a 128 bit number
 #[inline(always)]
+#[must_use]
 pub fn reduce_128(n: u128) -> u64 {
     reduce_159(n as u64, (n >> 64) as u32, (n >> 96) as u64)
 }
@@ -103,6 +109,7 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
 
 /// See <https://github.com/facebook/winterfell/blob/d0f4373da34569dc39fe8b978e785ebd83bdbeb5/math/src/field/f64/mod.rs#L576-L588>
 #[inline(always)]
+#[must_use]
 pub fn mont_reduce_128(x: u128) -> u64 {
     debug_assert!(x < (MODULUS as u128) << 64);
     let (x0, x1) = (x as u64, (x >> 64) as u64);
@@ -116,6 +123,7 @@ pub fn mont_reduce_128(x: u128) -> u64 {
 }
 
 /// Compute a^e
+#[must_use]
 pub fn mont_pow(mut a: u64, mut e: u64) -> u64 {
     debug_assert!(a < MODULUS);
 
@@ -131,6 +139,7 @@ pub fn mont_pow(mut a: u64, mut e: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn shift_48(a: u64) -> u64 {
     let mut b = (a >> 16) << 32;
     b -= b >> 32;
@@ -139,6 +148,7 @@ pub fn shift_48(a: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn shift_32(a: u64) -> u64 {
     let mut b = (a >> 32) << 32;
     b -= b >> 32;
@@ -146,6 +156,7 @@ pub fn shift_32(a: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn shift_64(a: u64) -> u64 {
     let mut b = a << 32;
     b -= b >> 32;
@@ -155,6 +166,7 @@ pub fn shift_64(a: u64) -> u64 {
 
 /// Compute a ⋅ 2^n
 #[inline(always)]
+#[must_use]
 pub fn shift(mut a: u64, n: u64) -> u64 {
     debug_assert!(a < MODULUS);
 
@@ -181,6 +193,7 @@ pub fn shift(mut a: u64, n: u64) -> u64 {
 
 /// Compute a ⋅ ω₃₈₄ⁱ
 #[inline(always)]
+#[must_use]
 pub fn root_384(a: u64, i: u64) -> u64 {
     debug_assert!(a < MODULUS);
     debug_assert!(i < 384);
@@ -194,6 +207,7 @@ pub fn root_384(a: u64, i: u64) -> u64 {
 }
 
 #[inline(always)]
+#[must_use]
 pub fn inv(a: u64) -> u64 {
     inv_ebgcd(a)
 }

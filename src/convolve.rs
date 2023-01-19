@@ -19,6 +19,7 @@ pub fn circular(a: &mut [Field], b: &[Field]) {
     intt(a);
 }
 
+#[must_use]
 pub fn circular_naive(a: &[Field], b: &[Field]) -> Vec<Field> {
     assert_eq!(a.len(), b.len());
     let n = a.len();
@@ -48,7 +49,7 @@ mod tests {
         let a = [Field::from(1), Field::from(2), Field::from(3)];
         let mut b = [Field::from(4), Field::from(5), Field::from(6)];
         ntt(&mut b);
-        let mut c = a.clone();
+        let mut c = a;
         circular(&mut c, &b);
         assert_eq!(c, [Field::from(31), Field::from(31), Field::from(28)]);
     }

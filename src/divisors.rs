@@ -4,7 +4,7 @@ use std::sync::Once;
 const ORDER: u64 = 0xffff_ffff_0000_0000;
 
 /// Multiplicative group order without large factors (>= 17).
-const SMOOTH_ORDER: u64 = 64424509440;
+const SMOOTH_ORDER: u64 = 64_424_509_440;
 
 const TWOS: u32 = 32;
 
@@ -22,6 +22,7 @@ pub fn is_divisor(n: usize) -> bool {
     n > 0 && ORDER % (n as u64) == 0
 }
 
+#[must_use]
 pub fn is_smooth(n: usize) -> bool {
     n > 0 && SMOOTH_ORDER % (n as u64) == 0
 }
@@ -34,11 +35,11 @@ pub fn divisors() -> &'static [u64] {
         // read from thereafter.
         DIVISORS_INIT.call_once(|| {
             let mut d = (0..=TWOS).map(|i| 1 << i).collect::<Vec<_>>();
-            for &f in FACTORS.iter() {
+            for &f in &FACTORS {
                 let n = d.iter().map(|&i| i * f).collect::<Vec<_>>();
                 d.extend(n);
             }
-            d.sort();
+            d.sort_unstable();
             DIVISORS = d;
         });
         DIVISORS.as_slice()
@@ -47,6 +48,7 @@ pub fn divisors() -> &'static [u64] {
 
 /// Returns the smallest divisor larger than or equal to `n`.
 /// Returns zero on zero input.
+#[must_use]
 pub fn next(n: usize) -> usize {
     if n == 0 {
         return 0;
@@ -63,9 +65,10 @@ pub fn next(n: usize) -> usize {
 /// are as close as possible.
 #[must_use]
 pub fn split(n: usize) -> usize {
-    if !is_divisor(n) {
-        panic!("{} does not divide multiplicative group order.", n);
-    }
+    assert!(
+        is_divisor(n),
+        "{n} does not divide multiplicative group order."
+    );
     let divisors = divisors();
 
     // Compute integer square root
