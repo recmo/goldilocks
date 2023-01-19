@@ -26,11 +26,6 @@ name = "ntt"
 harness = false
 required-features = ["bench"]
 
-[[bench]]
-name = "transpose"
-harness = false
-required-features = ["bench"]
-
 [[bin]]
 name = "codegen"
 path = "src/bin/codegen.rs"

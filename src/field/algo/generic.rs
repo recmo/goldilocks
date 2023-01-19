@@ -160,7 +160,7 @@ pub fn shift(mut a: u64, n: u64) -> u64 {
 
     match n {
         32 => return shift_32(a),
-        48 => return shift_48(a),
+        // 48 => return shift_48(a),
         64 => return shift_64(a),
         _ => {}
     }

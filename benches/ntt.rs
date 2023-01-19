@@ -2,15 +2,12 @@ use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
-    ntt,
-    ntt_old::Fft,
-    permute,
+    ntt, permute,
 };
 
 #[derive(Clone, Debug, ValueEnum)]
 enum Algorithm {
     Naive,
-    Old,
     Ntt,
     Inverse,
     Small,
@@ -74,16 +71,15 @@ fn main() {
             continue;
         }
 
-        let twiddles = winter_math::fft::get_twiddles(input.len());
-        let mut winput = input
-            .iter()
-            .map(|n| winter_math::fields::f64::BaseElement::new((*n).into()))
-            .collect::<Vec<_>>();
+        // let twiddles = winter_math::fft::get_twiddles(input.len());
+        // let mut winput = input
+        //     .iter()
+        //     .map(|n| winter_math::fields::f64::BaseElement::new((*n).into()))
+        //     .collect::<Vec<_>>();
 
         // Benchmark
         let duration = time(|| match cli.algo {
             Algorithm::Naive => ntt::naive::ntt(input),
-            Algorithm::Old => input.fft(),
             Algorithm::Ntt => ntt::ntt(input),
             Algorithm::Inverse => ntt::intt(input),
             Algorithm::Small => drop(ntt::small::ntt(input)),
@@ -100,7 +96,8 @@ fn main() {
                 permute::gw18_old::transpose(input, (a, b));
             }
             Algorithm::Winter => {
-                winter_math::fft::evaluate_poly(winput.as_mut_slice(), &twiddles);
+                // winter_math::fft::evaluate_poly(winput.as_mut_slice(), &twiddles);
+                unimplemented!()
             }
         });
         let throughput = (size as f64) / duration;
