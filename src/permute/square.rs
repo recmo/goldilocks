@@ -1,157 +1,145 @@
-//! Transpose square power-of-two matrices.
-
+//! Transpose square matrices.
 use std::{
     ptr::swap_nonoverlapping,
     sync::atomic::{AtomicPtr, Ordering},
 };
 
-pub fn transpose<T: Copy>(a: &mut [T], size: usize) {
-    assert_eq!(a.len(), size * size);
-    assert_eq!(std::mem::size_of::<T>(), std::mem::size_of::<u64>());
+pub fn transpose<T: Copy>(values: &mut [T], size: usize) {
+    // eprintln!("square::transpose({size})");
+    assert_eq!(values.len(), size * size);
+    if size <= 1 {
+        return;
+    }
+
     unsafe {
-        transpose_square(a.as_mut_ptr().cast::<u64>(), size, size);
+       transpose_square(values.as_mut_ptr(), size, size);
     }
 }
 
-/// Transpose a square power-of-two matrix.
-///
-/// # Panics
-///
-/// Panics if `a` is not a square matrix or if `width` is not a power of two.
-pub fn transpose_square_pub(a: &mut [u64], width: usize, height: usize) {
-    assert_eq!(a.len(), width * height);
-    assert_eq!(width, height);
-    assert!(width.is_power_of_two());
-    unsafe {
-        transpose_square(a.as_mut_ptr(), width, width);
-    }
-}
-
-unsafe fn transpose_square(a: *mut u64, stride: usize, n: usize) {
+unsafe fn transpose_square<T: Copy>(values: *mut T, stride: usize, size: usize) {
+    // eprintln!("square::transpose({size})");
     const REC_THRESHOLD: usize = 1 << 4;
     const PAR_THRESHOLD: usize = 1 << 10;
 
-    if n < REC_THRESHOLD {
-        for i in 0..n {
+    if size < REC_THRESHOLD {
+        // TODO: Try diagonal order to reduce cache collision.
+        for i in 0..size {
             for j in 0..i {
                 unsafe {
                     // Safety: pointers are non-overlapping and point to valid elements.
-                    swap_nonoverlapping(a.add(i * stride + j), a.add(j * stride + i), 1);
+                    swap_nonoverlapping(values.add(i * stride + j), values.add(j * stride + i), 1);
                 }
             }
         }
-    } else if n < PAR_THRESHOLD {
-        let n = n >> 1;
-        transpose_square(a, stride, n);
-        transpose_swap_square(a.add(n), a.add(n * stride), stride, n);
-        transpose_square(a.add(n * stride + n), stride, n);
+    } else if size < PAR_THRESHOLD {
+        // Recurse by splitting into four quadrants.
+        // +-----+-----+
+        // | a×a | a×b |
+        // +-----+-----+
+        // | b×a | b×b |
+        // +-----+-----+
+        let a = size / 2;
+        let b = size - a;
+
+        transpose_square(values, stride, a);
+        transpose_swap(values.add(a), values.add(a * stride), stride, (a, b));
+        transpose_square(values.add(a * stride + a), stride, b);
+
     } else {
-        let a = AtomicPtr::new(a);
-        let n = n >> 1;
-        rayon::join(
-            || {
-                transpose_swap_square(
-                    a.load(Ordering::Relaxed).add(n),
-                    a.load(Ordering::Relaxed).add(n * stride),
-                    stride,
-                    n,
-                );
-            },
-            || {
-                rayon::join(
-                    || transpose_square(a.load(Ordering::Relaxed), stride, n),
-                    || transpose_square(a.load(Ordering::Relaxed).add(n * stride + n), stride, n),
-                );
-            },
-        );
+        // Cast to AtomicPtr to allow sharing between threads.
+        let values = AtomicPtr::new(values);
+
+        let a = size / 2;
+        let b = size - a;
+        rayon::join(|| {
+            let values = values.load(Ordering::Relaxed);
+            transpose_swap(values.add(a), values.add(a * stride), stride, (a, b));
+        },|| {
+            rayon::join(
+                || transpose_square(values.load(Ordering::Relaxed), stride, a),
+                || transpose_square(values.load(Ordering::Relaxed).add(a * stride + a), stride, b),
+            );
+        });
     }
 }
 
-unsafe fn transpose_swap_square(a: *mut u64, b: *mut u64, stride: usize, n: usize) {
-    const REC_THRESHOLD: usize = 1 << 4;
-    const PAR_THRESHOLD: usize = 1 << 10;
+unsafe fn transpose_swap<T: Copy>(a: *mut T, b: *mut T, stride: usize, (rows, cols): (usize, usize)) {
+    // eprintln!("square::transpose_swap({rows}, {cols})");
+    const REC_THRESHOLD: usize = 1 << 8;
+    const PAR_THRESHOLD: usize = 1 << 20;
+    let size = rows * cols;
 
-    if n < REC_THRESHOLD {
-        // Run down diagonals
-        for i in 0..n {
-            for j in 0..n {
+    if size < REC_THRESHOLD {
+        // TODO: Run down diagonals to reduce cache collision.
+        for i in 0..rows {
+            for j in 0..cols {
                 unsafe {
                     // Safety: a and b are non-overlapping and point to valid elements.
-                    // TODO: Try diagonal order to reduce cache collision.
                     let ai = i * stride + j;
                     let bi = j * stride + i;
                     swap_nonoverlapping(a.add(ai), b.add(bi), 1);
                 }
             }
         }
-    } else if n < PAR_THRESHOLD {
-        let n = n >> 1;
-        transpose_swap_square(a, b, stride, n);
-        transpose_swap_square(a.add(n), b.add(n * stride), stride, n);
-        transpose_swap_square(a.add(n * stride), b.add(n), stride, n);
-        transpose_swap_square(a.add(n * stride + n), b.add(n * stride + n), stride, n);
+    } else if size < PAR_THRESHOLD {
+        // Recurse by splitting in half along longest axis.
+        if rows > cols {
+            let top = rows / 2;
+            let bottom = rows - top;
+            transpose_swap(a, b, stride, (top, cols));
+            transpose_swap(a.add(top * stride), b.add(top), stride, (bottom, cols));
+        } else {
+            let left = cols / 2;
+            let right = cols - left;
+            transpose_swap(a, b, stride, (rows, left));
+            transpose_swap(a.add(left), b.add(left * stride), stride, (rows, right));
+        }
     } else {
+        // Cast to AtomicPtr to allow sharing between threads.
         let a = AtomicPtr::new(a);
         let b = AtomicPtr::new(b);
-        let n = n >> 1;
-        rayon::join(
-            || {
-                rayon::join(
-                    || {
-                        transpose_swap_square(
-                            a.load(Ordering::Relaxed),
-                            b.load(Ordering::Relaxed),
-                            stride,
-                            n,
-                        );
-                    },
-                    || {
-                        transpose_swap_square(
-                            a.load(Ordering::Relaxed).add(n),
-                            b.load(Ordering::Relaxed).add(n * stride),
-                            stride,
-                            n,
-                        );
-                    },
-                )
-            },
-            || {
-                rayon::join(
-                    || {
-                        transpose_swap_square(
-                            a.load(Ordering::Relaxed).add(n * stride),
-                            b.load(Ordering::Relaxed).add(n),
-                            stride,
-                            n,
-                        );
-                    },
-                    || {
-                        transpose_swap_square(
-                            a.load(Ordering::Relaxed).add(n * stride + n),
-                            b.load(Ordering::Relaxed).add(n * stride + n),
-                            stride,
-                            n,
-                        );
-                    },
-                )
-            },
-        );
+
+        // Recurse by splitting in half along longest axis.
+        if rows > cols {
+            let top = rows / 2;
+            let bottom = rows - top;
+            rayon::join(|| {
+                let a = a.load(Ordering::Relaxed);
+                let b = b.load(Ordering::Relaxed);
+                transpose_swap(a, b, stride, (top, cols));
+            },|| {
+                let a = a.load(Ordering::Relaxed);
+                let b = b.load(Ordering::Relaxed);
+                transpose_swap(a.add(top * stride), b.add(top), stride, (bottom, cols));
+            });
+        } else {
+            let left = cols / 2;
+            let right = cols - left;
+            rayon::join(|| {
+                let a = a.load(Ordering::Relaxed);
+                let b = b.load(Ordering::Relaxed);
+                transpose_swap(a, b, stride, (rows, left));
+            },|| {
+                let a = a.load(Ordering::Relaxed);
+                let b = b.load(Ordering::Relaxed);
+                transpose_swap(a.add(left), b.add(left * stride), stride, (rows, right));
+            });
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{super::transpose_copy, *};
+    use super::{super::copy, *};
 
     #[test]
-    fn test_stranspose_square_ref() {
-        for e in 0_usize..12 {
-            let size = 1 << e;
+    fn test_transpose() {
+        for size in 0_usize..100 {
             let n = size * size;
             let mut matrix = (0_u64..n as u64).collect::<Vec<_>>();
             let mut reference = matrix.clone();
-            transpose_square_pub(&mut matrix, size, size);
-            transpose_copy(&mut reference, (size, size));
+            transpose(&mut matrix, size);
+            copy::transpose(&mut reference, (size, size));
             assert_eq!(matrix, reference);
         }
     }

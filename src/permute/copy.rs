@@ -4,6 +4,18 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
+pub fn transpose<T: Copy>(matrix: &mut [T], (rows, cols): (usize, usize)) {
+    // eprintln!("copy::transpose({rows}, {cols})");
+    assert_eq!(matrix.len(), rows * cols);
+    if matrix.is_empty() {
+        return;
+    }
+    let q = matrix.len() - 1;
+    let inv_permute = |i| if i == q { q } else { i * cols % q };
+    let copy = matrix.to_vec();
+    permute_wo_oop(&copy, matrix, 1, inv_permute);
+}
+
 pub fn transpose_copy_wo(matrix: &mut [u64], width: usize, height: usize) {
     let n = width * height;
     if n == 0 {
@@ -37,7 +49,7 @@ pub fn transpose_copy_ro(matrix: &mut [u64], width: usize, height: usize) {
 ///
 /// Panics if `src` and `dst` have different lengths or if `chunk` does not
 /// exactly divide the length.
-pub fn permute_wo_oop<T: Copy + Send + Sync>(
+pub fn permute_wo_oop<T: Copy>(
     src: &[T],
     dst: &mut [T],
     chunk: usize,
@@ -47,28 +59,29 @@ pub fn permute_wo_oop<T: Copy + Send + Sync>(
     // improvement.
 
     // Threshold when to switch to parallel algorithm.
+    // TODO: Parallel without `Send`
     const PAR_THRESHOLD: usize = 1_usize << 19;
 
     assert_eq!(src.len(), dst.len());
     assert_eq!(src.len() % chunk, 0);
     let n = src.len() / chunk;
-    if src.len() < PAR_THRESHOLD {
+    // if src.len() < PAR_THRESHOLD {
         for (i, dst) in dst.chunks_exact_mut(chunk).enumerate() {
             let i = inv_permute(i);
             assert!(i < n, "Permutation exceeds range");
             let src = &src[i * chunk..(i + 1) * chunk];
             dst.copy_from_slice(src);
         }
-    } else {
-        dst.par_chunks_exact_mut(chunk)
-            .enumerate()
-            .for_each(|(i, dst)| {
-                let i = inv_permute(i);
-                assert!(i < n, "Permutation exceeds range");
-                let src = &src[i * chunk..(i + 1) * chunk];
-                dst.copy_from_slice(src);
-            });
-    }
+    // } else {
+    //     dst.par_chunks_exact_mut(chunk)
+    //         .enumerate()
+    //         .for_each(|(i, dst)| {
+    //             let i = inv_permute(i);
+    //             assert!(i < n, "Permutation exceeds range");
+    //             let src = &src[i * chunk..(i + 1) * chunk];
+    //             dst.copy_from_slice(src);
+    //         });
+    // }
 }
 
 /// Parallel permuted copy in read order.

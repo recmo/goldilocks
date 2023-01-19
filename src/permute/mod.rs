@@ -1,6 +1,7 @@
 // mod inner_block;
 mod copy;
 // mod cyclic;
+pub mod gw18;
 pub mod gw18_old;
 pub mod permutation;
 mod square;
@@ -14,16 +15,10 @@ pub use self::{copy::*, square::*};
 /// # Panics
 ///
 /// Panics if `matrix.len()` does not equal `width * height`.
-pub fn transpose<T: Copy>(matrix: &mut [T], (rows, cols): (usize, usize)) {
+pub fn transpose<T: Copy + Send>(matrix: &mut [T], (rows, cols): (usize, usize)) {
     assert_eq!(matrix.len(), rows * cols);
 
-    if rows == cols {
-        assert_eq!(std::mem::size_of::<T>(), 8);
-        transpose_square_pub(unsafe { std::mem::transmute(matrix) }, cols, rows);
-    } else {
-        // TODO: Better algorithm.
-        transpose_copy(matrix, (rows, cols));
-    }
+    gw18::transpose(matrix, (rows, cols));
 }
 
 /// Transpose a matrix in place using a buffer.
