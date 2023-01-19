@@ -69,7 +69,7 @@ cargo asm --lib -p goldilocks-ntt "ntt::small::ntt_2" 0
 ```
 
 ```
-RUSTFLAGS="-Awarnings" cargo asm --lib --all-features --native --simplify -p goldilocks-ntt --rust "field::algo::generic::mul_redc_2"
+RUSTFLAGS="-Awarnings" cargo asm --lib --all-features -p goldilocks-ntt --rust "field::algo::generic::mul_redc_2"
 ```
 
 ## See also

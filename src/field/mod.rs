@@ -2,10 +2,10 @@ pub mod algo;
 mod rand;
 
 use core::{iter, ops};
-use std::fmt;
+use std::{fmt, ops::Neg};
 
 /// An element in the Goldilocks field.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(transparent)]
 pub struct Field(u64);
@@ -20,6 +20,7 @@ impl Field {
 impl Field {
     pub const fn new(value: u64) -> Self {
         assert!(value < Self::MODULUS);
+        let value = (((value as u128) * (algo::MONT_R1 as u128)) % (Self::MODULUS as u128)) as u64;
         Self(value)
     }
 
@@ -27,40 +28,54 @@ impl Field {
     #[inline(always)]
     #[must_use]
     pub fn inv(self) -> Self {
-        Self(algo::inv(self.0))
+        Self(algo::mont_mul(algo::inv(self.0), algo::MONT_R3))
     }
 
     #[inline(always)]
     #[must_use]
     pub fn pow(self, exp: u64) -> Self {
-        Self(algo::pow(self.0, exp))
+        Self(algo::mont_pow(self.0, exp))
     }
 
     #[inline(always)]
     #[must_use]
     pub fn root(order: u64) -> Option<Self> {
-        if (Self::MODULUS - 1) % order != 0 {
+        if algo::ORDER % order != 0 {
             return None;
         }
-        Some(Self(algo::root(order)))
-    }
-
-    #[inline(always)]
-    #[must_use]
-    pub fn mul_root_384(self, exp: u64) -> Self {
-        Self(algo::root_384(self.0, exp))
+        let exponent = algo::ORDER / order;
+        Some(Self(algo::mont_pow(algo::GENERATOR_R, exponent)))
     }
 }
 
 impl fmt::Debug for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <u64 as fmt::Debug>::fmt(&self.0, f)
+        let n = u64::from(self);
+        // let n = self.0;
+        <u64 as fmt::Debug>::fmt(&n, f)
     }
 }
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <u64 as fmt::Display>::fmt(&self.0, f)
+        let n = u64::from(self);
+        <u64 as fmt::Display>::fmt(&n, f)
+    }
+}
+
+impl PartialOrd for Field {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let a = u64::from(self);
+        let b = u64::from(other);
+        a.partial_cmp(&b)
+    }
+}
+
+impl Ord for Field {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let a = u64::from(self);
+        let b = u64::from(other);
+        a.cmp(&b)
     }
 }
 
@@ -69,9 +84,10 @@ impl From<i32> for Field {
     fn from(value: i32) -> Self {
         #[allow(clippy::cast_sign_loss)]
         if value >= 0 {
-            Self(algo::reduce_64(value as u64))
+            debug_assert!((value as u64) < Self::MODULUS);
+            Self(algo::mont_mul(value as u64, algo::MONT_R2))
         } else {
-            Self(algo::reduce_64(Self::MODULUS - (-value as u64)))
+            Self(algo::mont_mul(-value as u64, algo::MONT_R2)).neg()
         }
     }
 }
@@ -79,21 +95,28 @@ impl From<i32> for Field {
 impl From<u64> for Field {
     #[inline(always)]
     fn from(value: u64) -> Self {
-        Self(algo::reduce_64(value))
+        Self(algo::mont_mul(algo::reduce_64(value), algo::MONT_R2))
     }
 }
 
 impl From<u128> for Field {
     #[inline(always)]
     fn from(value: u128) -> Self {
-        Self(algo::reduce_128(value))
+        Self(algo::mont_mul(algo::reduce_128(value), algo::MONT_R2))
     }
 }
 
 impl From<Field> for u64 {
     #[inline(always)]
     fn from(value: Field) -> Self {
-        value.0
+        algo::mont_mul(value.0, 1)
+    }
+}
+
+impl From<&Field> for u64 {
+    #[inline(always)]
+    fn from(value: &Field) -> Self {
+        algo::mont_mul(value.0, 1)
     }
 }
 
@@ -149,20 +172,20 @@ impl ops::Mul for Field {
 
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
-        Self(algo::mul(self.0, rhs.0))
+        Self(algo::mont_mul(self.0, rhs.0))
     }
 }
 
 impl ops::MulAssign for Field {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
-        self.0 = algo::mul(self.0, rhs.0);
+        self.0 = algo::mont_mul(self.0, rhs.0);
     }
 }
 
 impl iter::Product for Field {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
-        Self(iter.fold(1, |a, n| algo::mul(a, n.0)))
+        Self(iter.fold(1, |a, n| algo::mont_mul(a, n.0)))
     }
 }
 
@@ -171,14 +194,14 @@ impl ops::Div for Field {
 
     #[inline(always)]
     fn div(self, rhs: Self) -> Self {
-        Self(algo::mul(self.0, algo::inv(rhs.0)))
+        Self(algo::mont_mul(self.0, rhs.inv().0))
     }
 }
 
 impl ops::DivAssign for Field {
     #[inline(always)]
     fn div_assign(&mut self, rhs: Self) {
-        self.0 = algo::mul(self.0, algo::inv(rhs.0));
+        self.0 = algo::mont_mul(self.0, rhs.inv().0);
     }
 }
 
@@ -221,6 +244,7 @@ mod tests {
         arbitrary::Arbitrary,
         num::u64,
         strategy::{BoxedStrategy, Strategy},
+        proptest, prop_assume
     };
 
     impl Arbitrary for Field {
@@ -228,8 +252,98 @@ mod tests {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> BoxedStrategy<Self> {
-            u64::ANY.prop_map(Self::from).boxed()
+            (0..algo::MODULUS).prop_map(Self).boxed()
         }
+    }
+
+    #[test]
+    fn test_construct() {
+        proptest!(|(n: u64)| {
+            prop_assume!(n < algo::MODULUS);
+            let a = Field::new(n);
+            let b = Field::from(n);
+            assert_eq!(a, b);
+            assert_eq!(u64::from(a), n);
+        });
+    }
+
+    #[test]
+    fn test_add_identity() {
+        proptest!(|(a: Field)| {
+            let b = a + Field::new(0);
+            assert_eq!(a, b);
+        });
+    }
+
+    #[test]
+    fn test_add_commutative() {
+        proptest!(|(a: Field, b: Field)| {
+            let ab = a + b;
+            let ba = b + a;
+            assert_eq!(ab, ba);
+        });
+    }
+
+    #[test]
+    fn test_add_associative() {
+        proptest!(|(a: Field, b: Field, c: Field)| {
+            let a_bc = a + (b + c);
+            let ab_c = (a + b) + c;
+            assert_eq!(a_bc, ab_c);
+        });
+    }
+
+    #[test]
+    fn test_sub() {
+        proptest!(|(a: Field, b: Field)| {
+            let ab = a + b;
+            let ab_b = ab - b;
+            assert_eq!(a, ab_b);
+        });
+    }
+
+    #[test]
+    fn test_mul_identity() {
+        proptest!(|(a: Field)| {
+            let b = a * Field::new(1);
+            assert_eq!(a, b);
+        });
+    }
+
+    #[test]
+    fn test_mul_commutative() {
+        proptest!(|(a: Field, b: Field)| {
+            let ab = a * b;
+            let ba = b * a;
+            assert_eq!(ab, ba);
+        });
+    }
+
+    #[test]
+    fn test_mul_associative() {
+        proptest!(|(a: Field, b: Field, c: Field)| {
+            let a_bc = a * (b * c);
+            let ab_c = (a * b) * c;
+            assert_eq!(a_bc, ab_c);
+        });
+    }
+
+    #[test]
+    fn test_distributive() {
+        proptest!(|(a: Field, b: Field, c: Field)| {
+            let a_bc = a * (b + c);
+            let ab_ac = (a * b) + (a * c);
+            assert_eq!(a_bc, ab_ac);
+        });
+    }
+
+    #[test]
+    fn test_root() {
+        let omega_5 = Field::root(5).unwrap();
+        assert_eq!(omega_5.pow(5), Field::new(1));
+        let omega_4 = Field::root(4).unwrap();
+        assert_eq!(omega_4.pow(4), Field::new(1));
+        assert_eq!(omega_4.pow(2), -Field::new(1));
     }
 }
 
