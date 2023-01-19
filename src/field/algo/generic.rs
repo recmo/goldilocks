@@ -7,8 +7,8 @@
 // We do a lot of intentional casting with truncation in this file.
 #![allow(clippy::cast_possible_truncation, clippy::cast_lossless)]
 
-use super::{GENERATOR, MODULUS, ORDER};
-use crate::{utils::branch_hint, field::algo::MONT_R1};
+use super::MODULUS;
+use crate::{field::algo::MONT_R1, utils::branch_hint};
 use core::mem::swap;
 
 /// Adds two field elements.
@@ -25,7 +25,7 @@ pub fn add(a: u64, b: u64) -> u64 {
 }
 
 /// Subtracts two field elements.
-/// 
+///
 /// Requires `a` and `b` to be reduced.
 #[inline(always)]
 pub fn sub(a: u64, b: u64) -> u64 {

@@ -1,7 +1,7 @@
 pub mod aarch64;
 pub mod generic;
 
-pub use self::generic::{inv, mont_mul, mul, mont_pow, reduce_128, reduce_64,  root_384, shift};
+pub use self::generic::{inv, mont_mul, mont_pow, mul, reduce_128, reduce_64, root_384, shift};
 // pub use self::aarch64::{add, sub};
 pub use self::generic::{add, sub};
 

@@ -243,8 +243,8 @@ mod tests {
     use proptest::{
         arbitrary::Arbitrary,
         num::u64,
+        prop_assume, proptest,
         strategy::{BoxedStrategy, Strategy},
-        proptest, prop_assume
     };
 
     impl Arbitrary for Field {

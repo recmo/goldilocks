@@ -166,7 +166,7 @@ pub fn generate(size: usize) {
     println!(
         r#"/// Size {size} NTT.
 pub fn ntt_{size}(values: &mut [Field]) {{
-    debug_assert_eq!(values.len(), {size});"#
+    assert_eq!(values.len(), {size});"#
     );
 
     let var_strings = (0..size).map(|i| format!("a{i}")).collect::<Vec<_>>();

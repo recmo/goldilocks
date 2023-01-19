@@ -46,7 +46,7 @@ pub fn ntt(values: &mut [Field]) -> bool {
 
 /// Size 2 NTT.
 pub fn ntt_2(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 2);
+    assert_eq!(values.len(), 2);
     let a0 = values[0];
     let a1 = values[1];
     let (a0, a1) = (a0 + a1, a0 - a1);
@@ -56,7 +56,7 @@ pub fn ntt_2(values: &mut [Field]) {
 
 /// Size 3 NTT.
 pub fn ntt_3(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 3);
+    assert_eq!(values.len(), 3);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -90,7 +90,7 @@ pub fn ntt_4(values: &mut [Field]) {
 
 /// Size 5 NTT.
 pub fn ntt_5(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 5);
+    assert_eq!(values.len(), 5);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -122,7 +122,7 @@ pub fn ntt_5(values: &mut [Field]) {
 
 /// Size 6 NTT.
 pub fn ntt_6(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 6);
+    assert_eq!(values.len(), 6);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -152,7 +152,7 @@ pub fn ntt_6(values: &mut [Field]) {
 
 /// Size 8 NTT.
 pub fn ntt_8(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 8);
+    assert_eq!(values.len(), 8);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -190,7 +190,7 @@ pub fn ntt_8(values: &mut [Field]) {
 
 /// Size 10 NTT.
 pub fn ntt_10(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 10);
+    assert_eq!(values.len(), 10);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -254,7 +254,7 @@ pub fn ntt_10(values: &mut [Field]) {
 
 /// Size 12 NTT.
 pub fn ntt_12(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 12);
+    assert_eq!(values.len(), 12);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -318,7 +318,7 @@ pub fn ntt_12(values: &mut [Field]) {
 
 /// Size 15 NTT.
 pub fn ntt_15(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 15);
+    assert_eq!(values.len(), 15);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -429,7 +429,7 @@ pub fn ntt_15(values: &mut [Field]) {
 
 /// Size 16 NTT.
 pub fn ntt_16(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 16);
+    assert_eq!(values.len(), 16);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -515,7 +515,7 @@ pub fn ntt_16(values: &mut [Field]) {
 
 /// Size 17 NTT.
 pub fn ntt_17(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 17);
+    assert_eq!(values.len(), 17);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -671,7 +671,7 @@ pub fn ntt_17(values: &mut [Field]) {
 
 /// Size 20 NTT.
 pub fn ntt_20(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 20);
+    assert_eq!(values.len(), 20);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -809,7 +809,7 @@ pub fn ntt_20(values: &mut [Field]) {
 
 /// Size 24 NTT.
 pub fn ntt_24(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 24);
+    assert_eq!(values.len(), 24);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -959,7 +959,7 @@ pub fn ntt_24(values: &mut [Field]) {
 
 /// Size 30 NTT.
 pub fn ntt_30(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 30);
+    assert_eq!(values.len(), 30);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -1191,7 +1191,7 @@ pub fn ntt_30(values: &mut [Field]) {
 
 /// Size 32 NTT.
 pub fn ntt_32(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 32);
+    assert_eq!(values.len(), 32);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -1389,7 +1389,7 @@ pub fn ntt_32(values: &mut [Field]) {
 
 /// Size 34 NTT.
 pub fn ntt_34(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 34);
+    assert_eq!(values.len(), 34);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -1713,7 +1713,7 @@ pub fn ntt_34(values: &mut [Field]) {
 
 /// Size 40 NTT.
 pub fn ntt_40(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 40);
+    assert_eq!(values.len(), 40);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -2019,7 +2019,7 @@ pub fn ntt_40(values: &mut [Field]) {
 
 /// Size 48 NTT.
 pub fn ntt_48(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 48);
+    assert_eq!(values.len(), 48);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -2361,7 +2361,7 @@ pub fn ntt_48(values: &mut [Field]) {
 
 /// Size 51 NTT.
 pub fn ntt_51(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 51);
+    assert_eq!(values.len(), 51);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -2904,7 +2904,7 @@ pub fn ntt_51(values: &mut [Field]) {
 
 /// Size 60 NTT.
 pub fn ntt_60(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 60);
+    assert_eq!(values.len(), 60);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -3438,7 +3438,7 @@ pub fn ntt_60(values: &mut [Field]) {
 
 /// Size 64 NTT.
 pub fn ntt_64(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 64);
+    assert_eq!(values.len(), 64);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -3892,7 +3892,7 @@ pub fn ntt_64(values: &mut [Field]) {
 
 /// Size 68 NTT.
 pub fn ntt_68(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 68);
+    assert_eq!(values.len(), 68);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -4586,7 +4586,7 @@ pub fn ntt_68(values: &mut [Field]) {
 
 /// Size 80 NTT.
 pub fn ntt_80(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 80);
+    assert_eq!(values.len(), 80);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -5296,7 +5296,7 @@ pub fn ntt_80(values: &mut [Field]) {
 
 /// Size 85 NTT.
 pub fn ntt_85(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 85);
+    assert_eq!(values.len(), 85);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -6345,7 +6345,7 @@ pub fn ntt_85(values: &mut [Field]) {
 
 /// Size 96 NTT.
 pub fn ntt_96(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 96);
+    assert_eq!(values.len(), 96);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -7103,7 +7103,7 @@ pub fn ntt_96(values: &mut [Field]) {
 
 /// Size 120 NTT.
 pub fn ntt_120(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 120);
+    assert_eq!(values.len(), 120);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
@@ -8265,7 +8265,7 @@ pub fn ntt_120(values: &mut [Field]) {
 
 /// Size 128 NTT.
 pub fn ntt_128(values: &mut [Field]) {
-    debug_assert_eq!(values.len(), 128);
+    assert_eq!(values.len(), 128);
     let a0 = values[0];
     let a1 = values[1];
     let a2 = values[2];
