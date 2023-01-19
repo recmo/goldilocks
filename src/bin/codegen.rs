@@ -165,6 +165,10 @@ fn good_thomas(vars: &mut [&str], (a, b): (usize, usize)) {
 pub fn generate(size: usize) {
     println!(
         r#"/// Size {size} NTT.
+///
+/// # Panics
+/// 
+/// Panics if `values.len() != {size}`.
 pub fn ntt_{size}(values: &mut [Field]) {{
     assert_eq!(values.len(), {size});"#
     );

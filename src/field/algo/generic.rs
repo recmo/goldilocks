@@ -110,6 +110,7 @@ fn reduce_159(low: u64, mid: u32, high: u64) -> u64 {
 /// See <https://github.com/facebook/winterfell/blob/d0f4373da34569dc39fe8b978e785ebd83bdbeb5/math/src/field/f64/mod.rs#L576-L588>
 #[inline(always)]
 #[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn mont_reduce_128(x: u128) -> u64 {
     debug_assert!(x < (MODULUS as u128) << 64);
     let (x0, x1) = (x as u64, (x >> 64) as u64);

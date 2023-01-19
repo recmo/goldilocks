@@ -18,12 +18,12 @@ static DIVISORS_INIT: Once = Once::new();
 
 /// Check if `n` is a divisor of the multiplicative group order.
 #[must_use]
-pub fn is_divisor(n: usize) -> bool {
+pub const fn is_divisor(n: usize) -> bool {
     n > 0 && ORDER % (n as u64) == 0
 }
 
 #[must_use]
-pub fn is_smooth(n: usize) -> bool {
+pub const fn is_smooth(n: usize) -> bool {
     n > 0 && SMOOTH_ORDER % (n as u64) == 0
 }
 

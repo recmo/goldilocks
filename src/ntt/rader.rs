@@ -160,6 +160,7 @@ pub fn ntt_3(values: &mut [Field]) {
 /// additions/subtractions.
 ///
 /// This method is also used by the codegen for the small NTTs.
+#[allow(clippy::many_single_char_names)]
 pub fn ntt_5(values: &mut [Field]) {
     debug_assert_eq!(values.len(), 5);
     let a = values[0];

@@ -45,6 +45,10 @@ pub fn ntt(values: &mut [Field]) -> bool {
 }
 
 /// Size 2 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 2`.
 pub fn ntt_2(values: &mut [Field]) {
     assert_eq!(values.len(), 2);
     let a0 = values[0];
@@ -55,6 +59,10 @@ pub fn ntt_2(values: &mut [Field]) {
 }
 
 /// Size 3 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 3`.
 pub fn ntt_3(values: &mut [Field]) {
     assert_eq!(values.len(), 3);
     let a0 = values[0];
@@ -71,6 +79,10 @@ pub fn ntt_3(values: &mut [Field]) {
 }
 
 /// Size 4 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 4`.
 pub fn ntt_4(values: &mut [Field]) {
     assert_eq!(values.len(), 4);
     let a0 = values[0];
@@ -89,6 +101,10 @@ pub fn ntt_4(values: &mut [Field]) {
 }
 
 /// Size 5 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 5`.
 pub fn ntt_5(values: &mut [Field]) {
     assert_eq!(values.len(), 5);
     let a0 = values[0];
@@ -121,6 +137,10 @@ pub fn ntt_5(values: &mut [Field]) {
 }
 
 /// Size 6 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 6`.
 pub fn ntt_6(values: &mut [Field]) {
     assert_eq!(values.len(), 6);
     let a0 = values[0];
@@ -151,6 +171,10 @@ pub fn ntt_6(values: &mut [Field]) {
 }
 
 /// Size 8 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 8`.
 pub fn ntt_8(values: &mut [Field]) {
     assert_eq!(values.len(), 8);
     let a0 = values[0];
@@ -189,6 +213,10 @@ pub fn ntt_8(values: &mut [Field]) {
 }
 
 /// Size 10 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 10`.
 pub fn ntt_10(values: &mut [Field]) {
     assert_eq!(values.len(), 10);
     let a0 = values[0];
@@ -253,6 +281,10 @@ pub fn ntt_10(values: &mut [Field]) {
 }
 
 /// Size 12 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 12`.
 pub fn ntt_12(values: &mut [Field]) {
     assert_eq!(values.len(), 12);
     let a0 = values[0];
@@ -317,6 +349,10 @@ pub fn ntt_12(values: &mut [Field]) {
 }
 
 /// Size 15 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 15`.
 pub fn ntt_15(values: &mut [Field]) {
     assert_eq!(values.len(), 15);
     let a0 = values[0];
@@ -428,6 +464,10 @@ pub fn ntt_15(values: &mut [Field]) {
 }
 
 /// Size 16 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 16`.
 pub fn ntt_16(values: &mut [Field]) {
     assert_eq!(values.len(), 16);
     let a0 = values[0];
@@ -514,6 +554,10 @@ pub fn ntt_16(values: &mut [Field]) {
 }
 
 /// Size 17 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 17`.
 pub fn ntt_17(values: &mut [Field]) {
     assert_eq!(values.len(), 17);
     let a0 = values[0];
@@ -670,6 +714,10 @@ pub fn ntt_17(values: &mut [Field]) {
 }
 
 /// Size 20 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 20`.
 pub fn ntt_20(values: &mut [Field]) {
     assert_eq!(values.len(), 20);
     let a0 = values[0];
@@ -808,6 +856,10 @@ pub fn ntt_20(values: &mut [Field]) {
 }
 
 /// Size 24 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 24`.
 pub fn ntt_24(values: &mut [Field]) {
     assert_eq!(values.len(), 24);
     let a0 = values[0];
@@ -958,6 +1010,10 @@ pub fn ntt_24(values: &mut [Field]) {
 }
 
 /// Size 30 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 30`.
 pub fn ntt_30(values: &mut [Field]) {
     assert_eq!(values.len(), 30);
     let a0 = values[0];
@@ -1190,6 +1246,10 @@ pub fn ntt_30(values: &mut [Field]) {
 }
 
 /// Size 32 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 32`.
 pub fn ntt_32(values: &mut [Field]) {
     assert_eq!(values.len(), 32);
     let a0 = values[0];
@@ -1388,6 +1448,10 @@ pub fn ntt_32(values: &mut [Field]) {
 }
 
 /// Size 34 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 34`.
 pub fn ntt_34(values: &mut [Field]) {
     assert_eq!(values.len(), 34);
     let a0 = values[0];
@@ -1712,6 +1776,10 @@ pub fn ntt_34(values: &mut [Field]) {
 }
 
 /// Size 40 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 40`.
 pub fn ntt_40(values: &mut [Field]) {
     assert_eq!(values.len(), 40);
     let a0 = values[0];
@@ -2018,6 +2086,10 @@ pub fn ntt_40(values: &mut [Field]) {
 }
 
 /// Size 48 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 48`.
 pub fn ntt_48(values: &mut [Field]) {
     assert_eq!(values.len(), 48);
     let a0 = values[0];
@@ -2360,6 +2432,10 @@ pub fn ntt_48(values: &mut [Field]) {
 }
 
 /// Size 51 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 51`.
 pub fn ntt_51(values: &mut [Field]) {
     assert_eq!(values.len(), 51);
     let a0 = values[0];
@@ -2903,6 +2979,10 @@ pub fn ntt_51(values: &mut [Field]) {
 }
 
 /// Size 60 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 60`.
 pub fn ntt_60(values: &mut [Field]) {
     assert_eq!(values.len(), 60);
     let a0 = values[0];
@@ -3437,6 +3517,10 @@ pub fn ntt_60(values: &mut [Field]) {
 }
 
 /// Size 64 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 64`.
 pub fn ntt_64(values: &mut [Field]) {
     assert_eq!(values.len(), 64);
     let a0 = values[0];
@@ -3891,6 +3975,10 @@ pub fn ntt_64(values: &mut [Field]) {
 }
 
 /// Size 68 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 68`.
 pub fn ntt_68(values: &mut [Field]) {
     assert_eq!(values.len(), 68);
     let a0 = values[0];
@@ -4585,6 +4673,10 @@ pub fn ntt_68(values: &mut [Field]) {
 }
 
 /// Size 80 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 80`.
 pub fn ntt_80(values: &mut [Field]) {
     assert_eq!(values.len(), 80);
     let a0 = values[0];
@@ -5295,6 +5387,10 @@ pub fn ntt_80(values: &mut [Field]) {
 }
 
 /// Size 85 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 85`.
 pub fn ntt_85(values: &mut [Field]) {
     assert_eq!(values.len(), 85);
     let a0 = values[0];
@@ -6344,6 +6440,10 @@ pub fn ntt_85(values: &mut [Field]) {
 }
 
 /// Size 96 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 96`.
 pub fn ntt_96(values: &mut [Field]) {
     assert_eq!(values.len(), 96);
     let a0 = values[0];
@@ -7102,6 +7202,10 @@ pub fn ntt_96(values: &mut [Field]) {
 }
 
 /// Size 120 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 120`.
 pub fn ntt_120(values: &mut [Field]) {
     assert_eq!(values.len(), 120);
     let a0 = values[0];
@@ -8264,6 +8368,10 @@ pub fn ntt_120(values: &mut [Field]) {
 }
 
 /// Size 128 NTT.
+///
+/// # Panics
+///
+/// Panics if `values.len() != 128`.
 pub fn ntt_128(values: &mut [Field]) {
     assert_eq!(values.len(), 128);
     let a0 = values[0];

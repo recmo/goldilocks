@@ -19,6 +19,11 @@ pub fn circular(a: &mut [Field], b: &[Field]) {
     intt(a);
 }
 
+/// In-place circular convolution using schoolbook algorithm.
+///
+/// # Panics
+///
+/// Panics if `a` and `b` have different lengths.
 #[must_use]
 pub fn circular_naive(a: &[Field], b: &[Field]) -> Vec<Field> {
     assert_eq!(a.len(), b.len());
