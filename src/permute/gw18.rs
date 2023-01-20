@@ -3,7 +3,7 @@
 use super::{copy, square};
 
 pub fn transpose<T: Copy + Send>(values: &mut [T], (rows, cols): (usize, usize)) {
-    const COPY_THRESHOLD: usize = 1 << 14;
+    const COPY_THRESHOLD: usize = if !cfg!(test) { 1 << 14 } else { 4 };
     const PAR_THRESHOLD: usize = 1 << 17;
 
     // eprintln!("transpose({rows}, {cols})");
@@ -200,23 +200,18 @@ fn unshuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
 fn exchange<T: Copy>(values: &mut [T], a: usize, b: usize) {
     // eprintln!("exchange({a}, {b})");
     debug_assert_eq!(values.len(), a + b);
-
-    if a >= b {
-        // TODO: Use `slice::swap_with_slice` instead.
-        for i in 0..b {
-            unsafe {
-                values.swap_unchecked(i, i + a);
-            }
-        }
-        if a != b {
-            exchange(&mut values[b..], a - b, b);
-        }
+    if a == b {
+        let (left, right) = values.split_at_mut(a);
+        left.swap_with_slice(right);
+    } else if a > b {
+        let (left, remainder) = values.split_at_mut(b);
+        let (_middle, right) = remainder.split_at_mut(a - b);
+        left.swap_with_slice(right);
+        exchange(&mut values[b..], a - b, b);
     } else {
-        for i in 0..a {
-            unsafe {
-                values.swap_unchecked(i, i + b);
-            }
-        }
+        let (left, remainder) = values.split_at_mut(a);
+        let (_middle, right) = remainder.split_at_mut(b - a);
+        left.swap_with_slice(right);
         exchange(&mut values[..b], a, b - a);
     }
 }
