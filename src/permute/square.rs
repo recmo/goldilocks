@@ -12,7 +12,7 @@ pub fn transpose<T: Copy>(values: &mut [T], size: usize) {
     }
 
     unsafe {
-       transpose_square(values.as_mut_ptr(), size, size);
+        transpose_square(values.as_mut_ptr(), size, size);
     }
 }
 
@@ -44,26 +44,39 @@ unsafe fn transpose_square<T: Copy>(values: *mut T, stride: usize, size: usize) 
         transpose_square(values, stride, a);
         transpose_swap(values.add(a), values.add(a * stride), stride, (a, b));
         transpose_square(values.add(a * stride + a), stride, b);
-
     } else {
         // Cast to AtomicPtr to allow sharing between threads.
         let values = AtomicPtr::new(values);
 
         let a = size / 2;
         let b = size - a;
-        rayon::join(|| {
-            let values = values.load(Ordering::Relaxed);
-            transpose_swap(values.add(a), values.add(a * stride), stride, (a, b));
-        },|| {
-            rayon::join(
-                || transpose_square(values.load(Ordering::Relaxed), stride, a),
-                || transpose_square(values.load(Ordering::Relaxed).add(a * stride + a), stride, b),
-            );
-        });
+        rayon::join(
+            || {
+                let values = values.load(Ordering::Relaxed);
+                transpose_swap(values.add(a), values.add(a * stride), stride, (a, b));
+            },
+            || {
+                rayon::join(
+                    || transpose_square(values.load(Ordering::Relaxed), stride, a),
+                    || {
+                        transpose_square(
+                            values.load(Ordering::Relaxed).add(a * stride + a),
+                            stride,
+                            b,
+                        )
+                    },
+                );
+            },
+        );
     }
 }
 
-unsafe fn transpose_swap<T: Copy>(a: *mut T, b: *mut T, stride: usize, (rows, cols): (usize, usize)) {
+unsafe fn transpose_swap<T: Copy>(
+    a: *mut T,
+    b: *mut T,
+    stride: usize,
+    (rows, cols): (usize, usize),
+) {
     // eprintln!("square::transpose_swap({rows}, {cols})");
     const REC_THRESHOLD: usize = 1 << 8;
     const PAR_THRESHOLD: usize = 1 << 20;
@@ -103,27 +116,33 @@ unsafe fn transpose_swap<T: Copy>(a: *mut T, b: *mut T, stride: usize, (rows, co
         if rows > cols {
             let top = rows / 2;
             let bottom = rows - top;
-            rayon::join(|| {
-                let a = a.load(Ordering::Relaxed);
-                let b = b.load(Ordering::Relaxed);
-                transpose_swap(a, b, stride, (top, cols));
-            },|| {
-                let a = a.load(Ordering::Relaxed);
-                let b = b.load(Ordering::Relaxed);
-                transpose_swap(a.add(top * stride), b.add(top), stride, (bottom, cols));
-            });
+            rayon::join(
+                || {
+                    let a = a.load(Ordering::Relaxed);
+                    let b = b.load(Ordering::Relaxed);
+                    transpose_swap(a, b, stride, (top, cols));
+                },
+                || {
+                    let a = a.load(Ordering::Relaxed);
+                    let b = b.load(Ordering::Relaxed);
+                    transpose_swap(a.add(top * stride), b.add(top), stride, (bottom, cols));
+                },
+            );
         } else {
             let left = cols / 2;
             let right = cols - left;
-            rayon::join(|| {
-                let a = a.load(Ordering::Relaxed);
-                let b = b.load(Ordering::Relaxed);
-                transpose_swap(a, b, stride, (rows, left));
-            },|| {
-                let a = a.load(Ordering::Relaxed);
-                let b = b.load(Ordering::Relaxed);
-                transpose_swap(a.add(left), b.add(left * stride), stride, (rows, right));
-            });
+            rayon::join(
+                || {
+                    let a = a.load(Ordering::Relaxed);
+                    let b = b.load(Ordering::Relaxed);
+                    transpose_swap(a, b, stride, (rows, left));
+                },
+                || {
+                    let a = a.load(Ordering::Relaxed);
+                    let b = b.load(Ordering::Relaxed);
+                    transpose_swap(a.add(left), b.add(left * stride), stride, (rows, right));
+                },
+            );
         }
     }
 }

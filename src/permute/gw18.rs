@@ -6,7 +6,7 @@ pub fn transpose<T: Copy + Send>(values: &mut [T], (rows, cols): (usize, usize))
     const COPY_THRESHOLD: usize = 1 << 14;
     const PAR_THRESHOLD: usize = 1 << 17;
 
-    //eprintln!("transpose({rows}, {cols})");
+    // eprintln!("transpose({rows}, {cols})");
     assert_eq!(values.len(), rows * cols);
     let size = rows * cols;
 
@@ -68,7 +68,7 @@ pub fn transpose<T: Copy + Send>(values: &mut [T], (rows, cols): (usize, usize))
 
 fn transpose_join<T: Copy + Send>(values: &mut [T], blocks: usize, size: usize) {
     const PAR_THRESHOLD: usize = 1 << 17;
-    //eprintln!("transpose_join({blocks}, {size})");
+    // eprintln!("transpose_join({blocks}, {size})");
     let n = blocks * size * size;
     debug_assert_eq!(values.len(), n);
     debug_assert!(!values.is_empty());
@@ -98,7 +98,7 @@ fn transpose_join<T: Copy + Send>(values: &mut [T], blocks: usize, size: usize) 
 
 fn partition_transpose<T: Copy + Send>(values: &mut [T], blocks: usize, size: usize) {
     const PAR_THRESHOLD: usize = 1 << 17;
-    //eprintln!("partition({blocks}, {size})");
+    // eprintln!("partition({blocks}, {size})");
     let n = blocks * size * size;
     debug_assert_eq!(values.len(), n);
     debug_assert!(!values.is_empty());
@@ -126,11 +126,10 @@ fn partition_transpose<T: Copy + Send>(values: &mut [T], blocks: usize, size: us
     }
 }
 
-/// 
-/// 
+///
 fn shuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
     const PAR_THRESHOLD: usize = 1 << 20;
-    //eprintln!("shuffle({la}, {lb}, {m})");
+    // eprintln!("shuffle({la}, {lb}, {m})");
     debug_assert_eq!(values.len(), (a + b) * m);
     let size = values.len();
 
@@ -161,11 +160,11 @@ fn shuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
     }
 }
 
-/// Given a vector of length `(a + b) * m` in pattern (a ‖ b) * m unshuffle it into
-/// a a pattern (a * m ‖ b * m).
+/// Given a vector of length `(a + b) * m` in pattern (a ‖ b) * m unshuffle it
+/// into a a pattern (a * m ‖ b * m).
 fn unshuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
     const PAR_THRESHOLD: usize = 1 << 20;
-    //eprintln!("unshuffle({a}, {b}, {m})");
+    // eprintln!("unshuffle({a}, {b}, {m})");
     debug_assert_eq!(values.len(), (a + b) * m);
     let size = values.len();
 
@@ -174,7 +173,7 @@ fn unshuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
         return;
     }
 
-    // Split the problem in two halves 
+    // Split the problem in two halves
     // Largest power of two less than `m`
     let m_left = largest_power_of_two(m);
     let m_right = m - m_left;
@@ -199,7 +198,7 @@ fn unshuffle<T: Copy + Send>(values: &mut [T], a: usize, b: usize, m: usize) {
 
 /// Given a pattern (a ‖ b) turn it into (b ‖ a).
 fn exchange<T: Copy>(values: &mut [T], a: usize, b: usize) {
-    //eprintln!("exchange({a}, {b})");
+    // eprintln!("exchange({a}, {b})");
     debug_assert_eq!(values.len(), a + b);
 
     if a >= b {

@@ -66,12 +66,12 @@ pub fn permute_wo_oop<T: Copy>(
     assert_eq!(src.len() % chunk, 0);
     let n = src.len() / chunk;
     // if src.len() < PAR_THRESHOLD {
-        for (i, dst) in dst.chunks_exact_mut(chunk).enumerate() {
-            let i = inv_permute(i);
-            assert!(i < n, "Permutation exceeds range");
-            let src = &src[i * chunk..(i + 1) * chunk];
-            dst.copy_from_slice(src);
-        }
+    for (i, dst) in dst.chunks_exact_mut(chunk).enumerate() {
+        let i = inv_permute(i);
+        assert!(i < n, "Permutation exceeds range");
+        let src = &src[i * chunk..(i + 1) * chunk];
+        dst.copy_from_slice(src);
+    }
     // } else {
     //     dst.par_chunks_exact_mut(chunk)
     //         .enumerate()

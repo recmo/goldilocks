@@ -59,39 +59,36 @@ fn main() {
         let a = split(size);
         let b = size / a;
 
-        // Skip unsupported sizes
-        let supported = match cli.algo {
-            Algorithm::Small => ntt::small::ntt(input),
-            Algorithm::Winter => input.len().is_power_of_two(),
-            _ => true,
-        };
-        if !supported {
-            continue;
-        }
-
-        // let twiddles = winter_math::fft::get_twiddles(input.len());
-        // let mut winput = input
-        //     .iter()
-        //     .map(|n| winter_math::fields::f64::BaseElement::new((*n).into()))
-        //     .collect::<Vec<_>>();
-
         // Benchmark
-        let duration = time(|| match cli.algo {
-            Algorithm::Naive => ntt::naive::ntt(input),
-            Algorithm::Ntt => ntt::ntt(input),
-            Algorithm::Inverse => ntt::intt(input),
-            Algorithm::Small => drop(ntt::small::ntt(input)),
-            Algorithm::Transpose => {
+        let duration = match cli.algo {
+            Algorithm::Naive => time(|| ntt::naive::ntt(input)),
+            Algorithm::Ntt => time(|| ntt::ntt(input)),
+            Algorithm::Inverse => time(|| ntt::intt(input)),
+            Algorithm::Small => {
+                if !ntt::small::ntt(input) {
+                    // Unsupported size
+                    continue;
+                }
+                time(|| drop(ntt::small::ntt(input)))},
+            Algorithm::Transpose => time(|| {
                 // Representative of the work in six-step NTT.
                 permute::transpose(input, (a, b));
                 permute::transpose(input, (b, a));
                 permute::transpose(input, (a, b));
-            }
+            }),
             Algorithm::Winter => {
-                // winter_math::fft::evaluate_poly(winput.as_mut_slice(), &twiddles);
-                unimplemented!()
+                if !input.len().is_power_of_two() {
+                    // Unsupported size
+                    continue;
+                }
+                let twiddles = winter_math::fft::get_twiddles(input.len());
+                let mut input = input
+                    .iter()
+                    .map(|n| winter_math::fields::f64::BaseElement::new((*n).into()))
+                    .collect::<Vec<_>>();
+                time(|| winter_math::fft::evaluate_poly(input.as_mut_slice(), &twiddles))
             }
-        });
+        };
         let throughput = (size as f64) / duration;
         println!("{size},{duration},{throughput}");
     }
