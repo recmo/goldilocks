@@ -2,7 +2,7 @@ use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
-    ntt, permute,
+    ntt, permute, utils::gcd,
 };
 
 #[derive(Clone, Debug, ValueEnum)]

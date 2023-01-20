@@ -17,7 +17,7 @@ pub use self::{copy::*, square::*};
 pub fn transpose<T: Copy + Send>(matrix: &mut [T], (rows, cols): (usize, usize)) {
     assert_eq!(matrix.len(), rows * cols);
 
-    gw18::transpose(matrix, (rows, cols));
+    // gw18::transpose(matrix, (rows, cols));
 }
 
 /// Transpose a matrix in place using a buffer.

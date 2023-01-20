@@ -18,6 +18,47 @@ pub fn ntt(values: &mut [Field]) {
     }
 }
 
+/// Cooley-Tukey NTT.
+pub fn recurse_copy(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize, usize)) {
+    assert_eq!(value.len(), a * b);
+    let root = Field::root(value.len() as u64)
+        .expect("Vector length does not divide multiplicative group order.");
+
+    // Operate over columns by copying
+    let mut buffer = vec![Field::new(0); a];
+    let mut omega_row = root;
+    for j in 0..b {
+        // Copy column into buffer
+        for (i, buffer) in buffer.iter_mut().enumerate() {
+            *buffer = value[i * b + j];
+        }
+
+        // Transform column
+        inner(buffer.as_mut_slice());
+
+        // Apply twiddles
+        if j > 0 {
+            let mut omega_col = omega_row;
+            for value in buffer.iter_mut().skip(1) {
+                *value *= omega_col;
+                omega_col *= omega_row;
+            }
+            omega_row *= root;
+        }
+
+        // Copy buffer into column
+        for (i, buffer) in buffer.iter().enumerate() {
+            value[i * b + j] = *buffer;
+        }
+    }
+
+    // Operate over rows directly
+    value.chunks_exact_mut(b).for_each(&inner);
+
+    // Do the final transpose to get the result in the right order.
+    transpose(value, (a, b));
+}
+
 /// Cooley-Tukey six-step NTT.
 pub fn recurse(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize, usize)) {
     debug_assert_eq!(value.len(), a * b);
