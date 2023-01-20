@@ -37,14 +37,14 @@ pub fn recurse_copy(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (
         inner(buffer.as_mut_slice());
 
         // Apply twiddles
-        if j > 0 {
-            let mut omega_col = omega_row;
-            for value in buffer.iter_mut().skip(1) {
-                *value *= omega_col;
-                omega_col *= omega_row;
-            }
-            omega_row *= root;
-        }
+        // if j > 0 {
+        //     let mut omega_col = omega_row;
+        //     for value in buffer.iter_mut().skip(1) {
+        //         *value *= omega_col;
+        //         omega_col *= omega_row;
+        //     }
+        //     omega_row *= root;
+        // }
 
         // Copy buffer into column
         for (i, buffer) in buffer.iter().enumerate() {
@@ -69,14 +69,14 @@ pub fn recurse(value: &mut [Field], inner: impl Fn(&mut [Field]), (a, b): (usize
     let mut omega_col = root;
     value.chunks_exact_mut(a).enumerate().for_each(|(i, row)| {
         inner(row);
-        if i > 0 {
-            let mut omega_row = omega_col;
-            for value in row.iter_mut().skip(1) {
-                *value *= omega_row;
-                omega_row *= omega_col;
-            }
-            omega_col *= root;
-        }
+        // if i > 0 {
+        //     let mut omega_row = omega_col;
+        //     for value in row.iter_mut().skip(1) {
+        //         *value *= omega_row;
+        //         omega_row *= omega_col;
+        //     }
+        //     omega_col *= root;
+        // }
     });
     transpose(value, (b, a));
     value.chunks_exact_mut(b).for_each(&inner);
@@ -98,17 +98,17 @@ pub fn par_recurse(
     value
         .par_chunks_exact_mut(a)
         .enumerate()
-        .for_each_with(None, |omega_col, (row, values)| {
+        .for_each_with(None, |_omega_col: &mut Option<Field>, (row, values)| {
             inner(values);
-            if row > 0 {
-                let omega_col = omega_col.get_or_insert_with(|| root.pow(row as u64));
-                let mut omega_row = *omega_col;
-                for value in values.iter_mut().skip(1) {
-                    *value *= omega_row;
-                    omega_row *= *omega_col;
-                }
-                *omega_col *= root;
-            }
+            // if row > 0 {
+            //     let omega_col = omega_col.get_or_insert_with(|| root.pow(row as u64));
+            //     let mut omega_row = *omega_col;
+            //     for value in values.iter_mut().skip(1) {
+            //         *value *= omega_row;
+            //         omega_row *= *omega_col;
+            //     }
+            //     *omega_col *= root;
+            // }
         });
     transpose(value, (b, a));
     value.par_chunks_exact_mut(b).for_each(&inner);
