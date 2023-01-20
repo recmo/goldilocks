@@ -1,3 +1,4 @@
+#![cfg(target_arch = "aarch64")]
 // OPT: Use a super optimizer to find optimal sequences for add, mul, neg, sub,
 // and shift.
 

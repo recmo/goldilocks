@@ -12,7 +12,6 @@ enum Algorithm {
     Inverse,
     Small,
     Transpose,
-    Gw18,
     Winter,
 }
 
@@ -87,12 +86,6 @@ fn main() {
                 permute::transpose(input, (a, b));
                 permute::transpose(input, (b, a));
                 permute::transpose(input, (a, b));
-            }
-            Algorithm::Gw18 => {
-                // Representative of the work in six-step NTT.
-                permute::gw18_old::transpose(input, (a, b));
-                permute::gw18_old::transpose(input, (b, a));
-                permute::gw18_old::transpose(input, (a, b));
             }
             Algorithm::Winter => {
                 // winter_math::fft::evaluate_poly(winput.as_mut_slice(), &twiddles);

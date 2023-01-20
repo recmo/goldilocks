@@ -5,7 +5,7 @@
 //! 2 in the split.
 use crate::{
     divisors::split,
-    permute::gw18_old::transpose,
+    permute::transpose,
     utils::{gcd, modinv},
     Field,
 };

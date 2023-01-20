@@ -1,4 +1,4 @@
-use crate::{divisors::split, permute::gw18_old::transpose, Field};
+use crate::{divisors::split, permute::transpose, Field};
 use rayon::prelude::*;
 
 /// Cooley–Tukey $\sqrt{n}$ recursive NTT.
