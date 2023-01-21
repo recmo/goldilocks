@@ -4,7 +4,7 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
-pub fn transpose<T: Copy>(matrix: &mut [T], (rows, cols): (usize, usize)) {
+pub fn transpose<T: Copy + Send + Sync>(matrix: &mut [T], (rows, cols): (usize, usize)) {
     // eprintln!("copy::transpose({rows}, {cols})");
     assert_eq!(matrix.len(), rows * cols);
     if matrix.is_empty() {
@@ -49,7 +49,7 @@ pub fn transpose_copy_ro(matrix: &mut [u64], width: usize, height: usize) {
 ///
 /// Panics if `src` and `dst` have different lengths or if `chunk` does not
 /// exactly divide the length.
-pub fn permute_wo_oop<T: Copy>(
+pub fn permute_wo_oop<T: Copy + Send + Sync>(
     src: &[T],
     dst: &mut [T],
     chunk: usize,
@@ -65,23 +65,23 @@ pub fn permute_wo_oop<T: Copy>(
     assert_eq!(src.len(), dst.len());
     assert_eq!(src.len() % chunk, 0);
     let n = src.len() / chunk;
-    // if src.len() < PAR_THRESHOLD {
-    for (i, dst) in dst.chunks_exact_mut(chunk).enumerate() {
-        let i = inv_permute(i);
-        assert!(i < n, "Permutation exceeds range");
-        let src = &src[i * chunk..(i + 1) * chunk];
-        dst.copy_from_slice(src);
+    if src.len() < PAR_THRESHOLD {
+        for (i, dst) in dst.chunks_exact_mut(chunk).enumerate() {
+            let i = inv_permute(i);
+            assert!(i < n, "Permutation exceeds range");
+            let src = &src[i * chunk..(i + 1) * chunk];
+            dst.copy_from_slice(src);
+        }
+    } else {
+        dst.par_chunks_exact_mut(chunk)
+            .enumerate()
+            .for_each(|(i, dst)| {
+                let i = inv_permute(i);
+                assert!(i < n, "Permutation exceeds range");
+                let src = &src[i * chunk..(i + 1) * chunk];
+                dst.copy_from_slice(src);
+            });
     }
-    // } else {
-    //     dst.par_chunks_exact_mut(chunk)
-    //         .enumerate()
-    //         .for_each(|(i, dst)| {
-    //             let i = inv_permute(i);
-    //             assert!(i < n, "Permutation exceeds range");
-    //             let src = &src[i * chunk..(i + 1) * chunk];
-    //             dst.copy_from_slice(src);
-    //         });
-    // }
 }
 
 /// Parallel permuted copy in read order.

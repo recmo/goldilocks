@@ -14,10 +14,10 @@ pub use self::{copy::*, square::*};
 /// # Panics
 ///
 /// Panics if `matrix.len()` does not equal `width * height`.
-pub fn transpose<T: Copy + Send>(matrix: &mut [T], (rows, cols): (usize, usize)) {
+pub fn transpose<T: Copy + Send + Sync>(matrix: &mut [T], (rows, cols): (usize, usize)) {
     assert_eq!(matrix.len(), rows * cols);
 
-    // gw18::transpose(matrix, (rows, cols));
+    gw18::transpose(matrix, (rows, cols));
 }
 
 /// Transpose a matrix in place using a buffer.

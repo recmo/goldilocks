@@ -12,7 +12,7 @@
 )]
 // See <https://stackoverflow.com/questions/61417452/how-to-get-a-feature-requirement-tag-in-the-documentation-generated-by-cargo-do>
 #![cfg_attr(has_doc_cfg, feature(doc_cfg))]
-#![feature(slice_swap_unchecked)]
+// #![feature(slice_swap_unchecked)]
 
 pub mod convolve;
 pub mod divisors;

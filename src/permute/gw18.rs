@@ -2,7 +2,7 @@
 
 use super::{copy, square};
 
-pub fn transpose<T: Copy + Send>(values: &mut [T], (rows, cols): (usize, usize)) {
+pub fn transpose<T: Copy + Send + Sync>(values: &mut [T], (rows, cols): (usize, usize)) {
     const COPY_THRESHOLD: usize = if !cfg!(test) { 1 << 14 } else { 4 };
     const PAR_THRESHOLD: usize = 1 << 17;
 

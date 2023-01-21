@@ -5,6 +5,8 @@ use goldilocks_ntt::{
     Field,
 };
 
+// OPT: Propagate sign through variable.
+
 fn shift(var: &str, count: usize) -> String {
     let count = count % 192;
     if count == 0 {
@@ -17,14 +19,19 @@ fn shift(var: &str, count: usize) -> String {
 }
 
 fn mul_root_384(var: &str, exp: usize) -> String {
+    assert!(exp < 384);
     if exp & 1 == 0 {
-        shift(var, exp / 2)
+        let exp = exp / 2;
+        shift(var, exp)
     } else {
-        format!(
-            "{} + {}",
-            shift(var, 24 + (exp / 2)),
-            shift(var, 168 + (exp / 2))
-        )
+        let exp = exp / 2;
+        let (a, b) = ((24 + exp) % 192, (168 + exp) % 192);
+        match (a < 96, b < 96) {
+            (true, true) => format!("({var} << {}) + ({var} << {})", a, b),
+            (true, false) => format!("({var} << {}) - ({var} << {})", a, b - 96),
+            (false, true) => format!("({var} << {}) - ({var} << {})", b, a - 96),
+            (false, false) => format!("-({var} << {}) - ({var} << {})", a - 96, b - 96),
+        }
     }
 }
 
@@ -194,7 +201,7 @@ fn main() {
     let sizes = divisors()
         .iter()
         .map(|n| *n as usize)
-        .filter(|&s| (2..=128).contains(&s))
+        .filter(|&s| (2..=256).contains(&s))
         .filter(|&s| s != 102) // This one crashes rustc
         .collect::<Vec<_>>();
 
