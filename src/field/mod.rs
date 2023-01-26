@@ -41,7 +41,7 @@ impl Field {
     #[inline(always)]
     #[must_use]
     pub fn root(order: u64) -> Option<Self> {
-        if algo::ORDER % order != 0 {
+        if order == 0 || algo::ORDER % order != 0 {
             return None;
         }
         let exponent = algo::ORDER / order;

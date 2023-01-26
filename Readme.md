@@ -57,7 +57,7 @@ RUSTDOCFLAGS="-Z unstable-options --show-coverage"  cargo doc --workspace --all-
 ```
 
 ```
-cargo run --bin codegen > small.rs && mv small.rs src/ntt && cargo test ntt::small
+cargo run --bin codegen2 > small.rs && mv small.rs src/ntt2 && cargo test ntt2::small
 ```
 
 Inspect assembly using [cargo-show-asm]
@@ -86,3 +86,6 @@ RUSTFLAGS="-Awarnings" cargo asm --lib --all-features -p goldilocks-ntt --rust "
 http://fftw.org/fftw-paper-ieee.pdf
 
 https://netlib.org/utk/people/JackDongarra/CCDSC-2014/talk35.pdf
+
+https://github.com/ejmahler/RustFFT
+

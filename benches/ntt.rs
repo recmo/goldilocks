@@ -2,7 +2,8 @@ use clap::{Parser, ValueEnum};
 use goldilocks_ntt::{
     bench::{rand_vec, time},
     divisors::{divisors, is_smooth, split},
-    ntt, permute, utils::gcd,
+    ntt, permute,
+    utils::gcd,
 };
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -69,7 +70,8 @@ fn main() {
                     // Unsupported size
                     continue;
                 }
-                time(|| drop(ntt::small::ntt(input)))},
+                time(|| ntt::small::ntt(input))
+            }
             Algorithm::Transpose => time(|| {
                 // Representative of the work in six-step NTT.
                 permute::transpose(input, (a, b));

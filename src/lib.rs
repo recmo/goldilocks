@@ -18,6 +18,7 @@ pub mod convolve;
 pub mod divisors;
 pub mod field;
 pub mod ntt;
+pub mod ntt2;
 pub mod permute;
 pub mod utils;
 
