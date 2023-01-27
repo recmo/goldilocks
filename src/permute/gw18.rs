@@ -1,22 +1,69 @@
 //! Gustavson FG, Walker DW. Algorithms for in-place matrix transposition. Concurrency Computat Pract Exper. 2019;31:e5071. https://doi.org/10.1002/cpe.5071
 
+use std::{cmp::min, sync::Arc};
+
 use super::{copy, square, Permute};
 
-pub struct Gw18{
-    rows: usize,
-    cols: usize,
-    parallel: bool,
+pub struct Gw18<T: 'static + Copy + Send + Sync> {
+    rows:                usize,
+    cols:                usize,
+    square:              usize,
+    transpose_square:    Arc<dyn Permute<T>>,
+    transpose_remainder: Arc<dyn Permute<T>>,
+    parallel:            bool,
 }
 
-impl Gw18 {
+impl<T: 'static + Copy + Send + Sync> Gw18<T> {
     pub fn new((rows, cols): (usize, usize)) -> Self {
         assert!(rows > 1 && cols > 1);
         let size = rows * cols;
-        Self{rows, cols, parallel: size > 1 << 17}
+
+        let (square, remainder) = if rows > cols {
+            (cols, (rows % cols, cols))
+        } else {
+            (rows, (rows, cols % rows))
+        };
+        let transpose_square = super::transpose_strategy((square, square));
+        let transpose_remainder = super::transpose_strategy(remainder);
+
+        Self {
+            rows,
+            cols,
+            square,
+            transpose_square,
+            transpose_remainder,
+            parallel: size > 1 << 17,
+        }
+    }
+
+    fn transpose_join(&self, values: &mut [T], blocks: usize) {
+        let size = self.square;
+
+        if blocks == 1 {
+            self.transpose_square.permute(values);
+        } else {
+            // Recurse by splitting into two halves
+            let blocks_top = blocks / 2;
+            let blocks_bottom = blocks - blocks_top;
+            let (top, bottom) = values.split_at_mut(blocks_top * size * size);
+
+            if self.parallel {
+                transpose_join(top, blocks_top, size);
+                transpose_join(bottom, blocks_bottom, size);
+            } else {
+                rayon::join(
+                    || transpose_join(top, blocks_top, size),
+                    || transpose_join(bottom, blocks_bottom, size),
+                );
+            }
+
+            // Merge the two halves
+            shuffle(values, blocks_top * size, blocks_bottom * size, size);
+        }
     }
 }
 
-impl<T: Copy + Send + Sync> Permute<T> for Gw18 {
+impl<T: 'static + Copy + Send + Sync> Permute<T> for Gw18<T> {
     fn len(&self) -> usize {
         self.rows * self.cols
     }
@@ -38,11 +85,11 @@ impl<T: Copy + Send + Sync> Permute<T> for Gw18 {
                     transpose_join(head, squares, cols);
 
                     // Transpose remainder
-                    transpose(tail, (remainder, cols));
+                    self.transpose_remainder.permute(tail);
                 } else {
                     rayon::join(
                         || transpose_join(head, squares, cols),
-                        || transpose(tail, (remainder, cols)),
+                        || self.transpose_remainder.permute(tail),
                     );
                 }
 
@@ -64,11 +111,11 @@ impl<T: Copy + Send + Sync> Permute<T> for Gw18 {
                     partition_transpose(head, squares, rows);
 
                     // Transpose remainder
-                    transpose(tail, (rows, remainder));
+                    self.transpose_remainder.permute(tail);
                 } else {
                     rayon::join(
                         || partition_transpose(head, squares, rows),
-                        || transpose(tail, (rows, remainder)),
+                        || self.transpose_remainder.permute(tail),
                     );
                 }
             }

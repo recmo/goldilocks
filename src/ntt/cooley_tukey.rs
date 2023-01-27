@@ -1,19 +1,23 @@
 use std::sync::Arc;
 
 use super::Ntt;
-use crate::{divisors::split, permute::{transpose, Permute}, Field};
+use crate::{
+    divisors::split,
+    permute::{transpose, Permute},
+    Field,
+};
 use rayon::prelude::*;
 
 pub struct CooleyTukey {
-    size:     usize,
-    split:    (usize, usize),
-    inner_a:  Arc<dyn Ntt>,
-    inner_b:  Arc<dyn Ntt>,
+    size:         usize,
+    split:        (usize, usize),
+    inner_a:      Arc<dyn Ntt>,
+    inner_b:      Arc<dyn Ntt>,
     transpose_ab: Arc<dyn Permute<Field>>,
     transpose_ba: Arc<dyn Permute<Field>>,
-    root:     Field,
-    twiddles: Vec<Field>,
-    parallel: bool,
+    root:         Field,
+    twiddles:     Vec<Field>,
+    parallel:     bool,
 }
 
 impl CooleyTukey {

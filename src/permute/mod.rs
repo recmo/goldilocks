@@ -7,19 +7,15 @@ pub mod permutation;
 mod square;
 
 pub use self::{copy::*, square::*};
-use std::{
-    sync::{Arc},
-};
+use std::sync::Arc;
 
-pub trait Permute<T: Copy + Send + Sync>: Sync + Send {
+pub trait Permute<T: 'static + Copy + Send + Sync>: Sync + Send {
     fn len(&self) -> usize;
 
-    // OPT: We could also have the stride stored in the structure, and just pass raw
-    // pointers down the tree.
     fn permute(&self, values: &mut [T]);
 }
 
-impl<T: Copy + Send + Sync> Permute<T> for Arc<dyn Permute<T>> {
+impl<T: 'static + Copy + Send + Sync> Permute<T> for Arc<dyn Permute<T>> {
     fn len(&self) -> usize {
         self.as_ref().len()
     }
@@ -29,14 +25,16 @@ impl<T: Copy + Send + Sync> Permute<T> for Arc<dyn Permute<T>> {
     }
 }
 
-pub fn transpose_strategy<T: Copy + Send + Sync>((rows, cols): (usize, usize)) -> Arc<dyn Permute<T>> {
+pub fn transpose_strategy<T: 'static + Copy + Send + Sync>(
+    (rows, cols): (usize, usize),
+) -> Arc<dyn Permute<T> + 'static> {
     let size = rows * cols;
 
     if rows == cols {
         Arc::new(SquareTranspose(rows)) as Arc<dyn Permute<T>>
-    } else if size <= 1 << 25 {
+    } else if size <= 1 << 32 {
         let permute = permutation::transpose(rows, cols);
-        Arc::new(cycles::Cycles::from_fn(size, permute)) as Arc<dyn Permute<T>>
+        cycles::from_fn(size, permute)
     } else {
         Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
     }
@@ -44,7 +42,7 @@ pub fn transpose_strategy<T: Copy + Send + Sync>((rows, cols): (usize, usize)) -
 
 pub struct SquareTranspose(usize);
 
-impl<T: Copy + Send + Sync> Permute<T> for SquareTranspose {
+impl<T: 'static + Copy + Send + Sync> Permute<T> for SquareTranspose {
     fn len(&self) -> usize {
         self.0 * self.0
     }

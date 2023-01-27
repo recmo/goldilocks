@@ -1,16 +1,36 @@
-use std::{fmt, sync::atomic::{AtomicPtr, Ordering}};
-use rayon::prelude::*;
 use super::Permute;
+use rayon::prelude::*;
+use std::{
+    fmt,
+    sync::{atomic::{AtomicPtr, Ordering}, Arc}, collections::BTreeMap,
+};
 
-pub struct Cycles {
-    size: usize,
-    cycles: Vec<Vec<usize>>,
+pub struct Cycles<I: Index> {
+    size:     usize,
+    cycles:   Vec<(usize, Vec<I>)>,
     parallel: bool,
 }
 
-impl Cycles {
+pub trait Index: 'static + Copy + Send + Sync {
+    fn max() -> usize;
+    fn from(n: usize) -> Self;
+    fn to(self) -> usize;
+}
+
+pub fn from_fn<T: 'static + Copy + Send + Sync>(size: usize, permutation: impl Fn(usize) -> usize) -> Arc<dyn Permute<T>> {
+    if size <= u16::MAX as usize {
+        Arc::new(Cycles::<u16>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
+    } else if size <= u32::MAX as usize {
+        Arc::new(Cycles::<u32>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
+    } else {
+        Arc::new(Cycles::<usize>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
+    }
+}
+
+impl<I: Index> Cycles<I> {
     pub fn from_fn(size: usize, permutation: impl Fn(usize) -> usize) -> Self {
-        let mut cycles = Vec::new();
+        assert!(size <= I::max(), "Invalid index type for size.");
+        let mut cycles = BTreeMap::<usize, Vec<I>>::new();
         let mut done = vec![false; size];
         let mut cycle = Vec::new();
 
@@ -25,7 +45,7 @@ impl Cycles {
             loop {
                 assert!(j < size, "Not a permutation: out of bounds.");
                 assert!(!done[j], "Not a permutation: not bijective.");
-                cycle.push(j);
+                cycle.push(I::from(j));
                 done[j] = true;
                 j = permutation(j);
                 if j == i {
@@ -33,13 +53,14 @@ impl Cycles {
                 }
             }
 
-            // Add the cycle to the list sorted by length.
-            let length = cycle.len();
-            if cycles.len() < length {
-                cycles.resize(length, Vec::new());
+            // Add non-trivial cycles to the collection.
+            if cycle.len() > 1 {
+                cycles.entry(cycle.len()).or_default().extend(cycle.drain(..).rev());
+            } else {
+                cycle.clear();
             }
-            cycles[cycle.len() - 1].extend(cycle.drain(..).rev());
         }
+        let cycles = cycles.into_iter().collect();
         Self {
             size,
             cycles,
@@ -58,34 +79,17 @@ impl Cycles {
     fn ser_apply<T: Copy + Send + Sync>(&self, values: &mut [T]) {
         assert_eq!(values.len(), self.size);
 
-        // Skip cycles of length 1.
-        let mut cycles = self.cycles.iter().skip(1);
-
-        // Swaps (special case for cycles of length 2)
-        for swap in cycles.next().iter().flat_map(|cycle| cycle.chunks_exact(2)) {
-            unsafe {
-                // SAFETY: We know cycles has length 2 and contains only valid
-                // non-overlapping indices into `values`.
-                let a = *swap.get_unchecked(0);
-                let b = *swap.get_unchecked(1);
-                // TODO: Replace with `swap_unchecked` when stabilized.
-                let tmp = *values.get_unchecked(a);
-                *values.get_unchecked_mut(a) = *values.get_unchecked(b);
-                *values.get_unchecked_mut(b) = tmp;
-            }
-        }
-
         // Cycles
-        for (i, cycles) in cycles.enumerate() {
-            let length = i + 2;
-            for cycle in cycles.chunks_exact(length) {
-
+        for (length, cycles) in self.cycles.iter() {
+            debug_assert!(*length >= 2);
+            debug_assert_eq!(cycles.len() % *length, 0);
+            for cycle in cycles.chunks_exact(*length) {
                 unsafe {
-                    // SAFETY: We know cycles has length `length` >= 3 and contains
+                    // SAFETY: We know cycles has length `length` >= 2 and contains
                     // only valid non-overlapping indices into `values`.
-                    let mut dst = *cycle.get_unchecked(0);
+                    let mut dst = cycle.get_unchecked(0).to();
                     let temp = *values.get_unchecked(dst);
-                    for &src in cycle.iter().skip(1) {
+                    for src in cycle.iter().skip(1).map(|i| i.to()) {
                         *values.get_unchecked_mut(dst) = *values.get_unchecked(src);
                         dst = src;
                     }
@@ -102,46 +106,32 @@ impl Cycles {
         // parallel. For this we need to use a pointer we can share between threads.
         let values = AtomicPtr::new(values.as_mut_ptr());
 
-        self.cycles.par_iter().enumerate().skip(1).for_each(|(i, cycles)| {
-            let length = i + 1;
-            if length == 2 {
-                // Swaps (special case for cycles of length 2)
-                cycles.par_chunks_exact(2).for_each(|swap| {
+        self.cycles
+            .par_iter()
+            .for_each(|(length, cycles)| {
+                debug_assert!(*length >= 2);
+                debug_assert_eq!(cycles.len() % *length, 0);
+                cycles.par_chunks_exact(*length).for_each(|cycle| {
                     let values = values.load(Ordering::Relaxed);
                     unsafe {
-                        // SAFETY: We know cycles has length 2 and contains only valid
-                        // non-overlapping indices into `values`.
-                        let a = *swap.get_unchecked(0);
-                        let b = *swap.get_unchecked(1);
-                        // TODO: Replace with `swap_unchecked` when stabilized.
-                        let tmp = *values.add(a);
-                        *values.add(a) = *values.add(b);
-                        *values.add(b) = tmp;
-                    }
-                });
-            } else {
-                cycles.par_chunks_exact(length).for_each(|cycle| {
-                    let values = values.load(Ordering::Relaxed);
-                    unsafe {
-                        // SAFETY: We know cycles has length `length` >= 3 and contains
+                        // SAFETY: We know cycles has length `length` >= 2 and contains
                         // only valid non-overlapping indices into `values`.
-                        let mut dst = *cycle.get_unchecked(0);
+                        let mut dst = cycle.get_unchecked(0).to();
                         let temp = *values.add(dst);
-                        for &src in cycle.iter().skip(1) {
+                        for src in cycle.iter().skip(1).map(|i| i.to()) {
                             *values.add(dst) = *values.add(src);
                             dst = src;
                         }
                         *values.add(dst) = temp;
                     }
                 });
-            }
-        });
+            });
     }
 }
 
-impl<T: Copy + Send + Sync> Permute<T> for Cycles {
+impl<I: Index, T: 'static + Copy + Send + Sync> Permute<T> for Cycles<I> {
     fn len(&self) -> usize {
-        self.cycles.iter().map(|cycle| cycle.len()).sum()
+        self.size
     }
 
     fn permute(&self, values: &mut [T]) {
@@ -149,17 +139,16 @@ impl<T: Copy + Send + Sync> Permute<T> for Cycles {
     }
 }
 
-impl fmt::Debug for Cycles {
+impl<I: Index> fmt::Debug for Cycles<I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (i, cycle) in self.cycles.iter().enumerate() {
-            let length = i + 1;
-            for (j, cycle) in cycle.chunks_exact(length).enumerate() {
+        for (length, cycles) in self.cycles.iter() {
+            for (j, cycle) in cycles.chunks_exact(*length).enumerate() {
                 write!(f, "(")?;
                 for (k, &x) in cycle.iter().enumerate() {
                     if k > 0 {
                         write!(f, " ")?;
                     }
-                    write!(f, "{}", x)?;
+                    write!(f, "{}", x.to())?;
                 }
                 write!(f, ")")?;
             }
@@ -168,6 +157,47 @@ impl fmt::Debug for Cycles {
     }
 }
 
+impl Index for u16 {
+    fn max() -> usize {
+        u16::MAX as usize
+    }
+
+    fn from(n: usize) -> Self {
+        n as u16
+    }
+
+    fn to(self) -> usize {
+        self as usize
+    }
+}
+
+impl Index for u32 {
+    fn max() -> usize {
+        u32::MAX as usize
+    }
+
+    fn from(n: usize) -> Self {
+        n as u32
+    }
+
+    fn to(self) -> usize {
+        self as usize
+    }
+}
+
+impl Index for usize {
+    fn max() -> usize {
+        usize::MAX
+    }
+
+    fn from(n: usize) -> Self {
+        n
+    }
+
+    fn to(self) -> usize {
+        self
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -175,16 +205,33 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_transpose() {
-        let (a, b) = (3, 4);
+    fn test_transpose(a: usize, b: usize) {
         let size = a * b;
         let permutation = permute::permutation::transpose(a, b);
-        let cycles = Cycles::from_fn(size, permutation);
+        let cycles = Cycles::<usize>::from_fn(size, permutation);
         let mut values = (0..size).collect::<Vec<_>>();
         let mut expected = values.clone();
         cycles.permute(&mut values);
         permute::transpose_copy(&mut expected, (a, b));
         assert_eq!(values, expected);
+    }
+
+    #[test]
+    fn test_transpose_small() {
+        for a in 0..=4 {
+            for b in 0..=4 {
+                test_transpose(a, b);
+            }
+        }
+    }
+
+    #[test]
+    fn test_transpose_16x32() {
+        test_transpose(16, 32);
+    }
+
+    #[test]
+    fn test_transpose_120x128() {
+        test_transpose(120, 128);
     }
 }
