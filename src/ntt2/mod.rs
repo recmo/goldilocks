@@ -36,6 +36,20 @@ mod tests {
             assert_eq!(value, expected);
         }
     }
+
+    /// Test `Ntt` object by comparing to naive implementation.
+    #[track_caller]
+    pub fn test_ntt(ntt: impl Ntt) {
+        let size = ntt.len();
+        let mut rng = StdRng::seed_from_u64(Field::MODULUS);
+        let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut expected = values.clone();
+        crate::ntt::naive::ntt(&mut expected);
+        ntt.ntt(Vector::from(values.as_mut_slice()));
+        for (&value, expected) in values.iter().zip(expected) {
+            assert_eq!(value, expected);
+        }
+    }
 }
 
 #[cfg(feature = "bench")]
@@ -55,7 +69,7 @@ pub mod bench {
         let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
         let mut vec = Vector::from(values.as_mut_slice());
 
-        let mut group = criterion.benchmark_group("ntt");
+        let mut group = criterion.benchmark_group("ntt2");
         group.throughput(Throughput::Elements(size as u64));
         group.bench_function(BenchmarkId::new(name, size), move |bencher| {
             bencher.iter(|| ntt(vec.reborrow()));

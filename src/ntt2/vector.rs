@@ -97,7 +97,7 @@ impl Index<usize> for Vector<'_> {
     #[inline(always)]
     #[must_use]
     fn index(&self, i: usize) -> &Self::Output {
-        assert!(i < self.len, "Index out of range");
+        //assert!(i < self.len, "Index out of range");
         unsafe {
             // SAFETY: This is a valid index.
             &*self.data.offset((i as isize) * self.stride)
@@ -109,7 +109,7 @@ impl IndexMut<usize> for Vector<'_> {
     #[inline(always)]
     #[must_use]
     fn index_mut(&mut self, i: usize) -> &mut Self::Output {
-        assert!(i < self.len, "Index out of range");
+        //assert!(i < self.len, "Index out of range");
         unsafe {
             // SAFETY: This is a valid index.
             &mut *self.data.offset((i as isize) * self.stride)

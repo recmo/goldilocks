@@ -42,7 +42,7 @@ pub mod bench {
     pub fn group(criterion: &mut Criterion) {
         field::bench::group(criterion);
         ntt::bench::group(criterion);
-        // ntt_old::bench::group(criterion);
+        ntt2::bench::group(criterion);
     }
 
     pub fn rand_vec<T>(size: usize) -> Vec<T>

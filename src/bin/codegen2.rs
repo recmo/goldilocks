@@ -176,7 +176,8 @@ pub fn generate(size: usize) {
 /// # Panics
 /// 
 /// Panics if `values.len() != {size}`.
-pub fn ntt_{size}(values: Vector) {{"#
+pub fn ntt_{size}(mut values: Vector) {{
+        let mut reader = values.data;"#
     );
 
     let var_strings = (0..size).map(|i| format!("a{i}")).collect::<Vec<_>>();
@@ -184,14 +185,21 @@ pub fn ntt_{size}(values: Vector) {{"#
 
     // Generate reads
     for (i, a) in vars.iter().enumerate() {
-        println!("    let {a} = values[{i}];");
+        println!("        let {a} = unsafe {{ *reader }};");
+        if i < vars.len() - 1 {
+            println!("        reader = unsafe {{ reader.offset(values.stride) }};");
+        }
     }
 
     ntt(&mut vars);
 
     // Generate writes
+    println!("        let mut writer = values.data;");
     for (i, a) in vars.iter().enumerate() {
-        println!("    values[{i}] = {a};");
+        println!("        unsafe {{ *writer = {a} }};");
+        if i < vars.len() - 1 {
+            println!("        writer = unsafe {{ writer.offset(values.stride) }};");
+        }
     }
     println!("}}\n");
 }
@@ -217,7 +225,7 @@ use crate::Field;
 
 pub struct Small {{
     len: usize,
-    ntt: fn(Vector),
+    ntt_fn: fn(Vector),
 }}
 
 impl Ntt for Small {{
@@ -226,25 +234,26 @@ impl Ntt for Small {{
     }}
 
     fn ntt(&self, values: Vector) {{
-        self.ntt(values);
+        (self.ntt_fn)(values);
     }}
 }}
 
 impl Small {{
-    fn new(len: usize) -> Option<Self> {{
-        let ntt = match len {{
+    pub fn new(len: usize) -> Option<Self> {{
+        let ntt_fn = match len {{
             ..=1 => nop,"
     );
     for s in &sizes {
-        println!("        {s} => ntt_{s},");
+        println!("            {s} => ntt_{s},");
     }
     println!(
-        "        _ => return None,
+        "            _ => return None,
+        }};
+        Some(Self {{ len, ntt_fn }})
     }}
-    Some(Self {{ len, ntt }})
 }}
 
-fn nop(values: Vector) {{}}
+fn nop(_values: Vector) {{}}
 
 "
     );
@@ -263,12 +272,13 @@ fn nop(values: Vector) {{}}
     println!(
         "#[cfg(test)]
 mod tests {{
-    use super::{{super::tests::test_ntt_fn, *}};
+    use super::{{super::tests::{{test_ntt, test_ntt_fn}}, *}};
 
     #[test]
     fn test_small_ntt() {{
         for size in [0, 1, {size_list}] {{
-            test_ntt_fn(|values| assert!(ntt(values)), size);
+            let ntt = Small::new(size).unwrap();
+            test_ntt(ntt);
         }}
     }}"
     );
