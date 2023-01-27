@@ -1,6 +1,80 @@
 //! Gustavson FG, Walker DW. Algorithms for in-place matrix transposition. Concurrency Computat Pract Exper. 2019;31:e5071. https://doi.org/10.1002/cpe.5071
 
-use super::{copy, square};
+use super::{copy, square, Permute};
+
+pub struct Gw18{
+    rows: usize,
+    cols: usize,
+    parallel: bool,
+}
+
+impl Gw18 {
+    pub fn new((rows, cols): (usize, usize)) -> Self {
+        assert!(rows > 1 && cols > 1);
+        let size = rows * cols;
+        Self{rows, cols, parallel: size > 1 << 17}
+    }
+}
+
+impl<T: Copy + Send + Sync> Permute<T> for Gw18 {
+    fn len(&self) -> usize {
+        self.rows * self.cols
+    }
+
+    fn permute(&self, values: &mut [T]) {
+        let (rows, cols) = (self.rows, self.cols);
+        assert_eq!(values.len(), rows * cols);
+
+        if self.rows > self.cols {
+            // Divide into (cols × cols) squares and remainder
+            let (squares, remainder) = (rows / cols, rows % cols);
+            if remainder == 0 {
+                transpose_join(values, squares, cols);
+            } else {
+                let (head, tail) = values.split_at_mut(squares * cols * cols);
+
+                if !self.parallel {
+                    // Transpose and join squares
+                    transpose_join(head, squares, cols);
+
+                    // Transpose remainder
+                    transpose(tail, (remainder, cols));
+                } else {
+                    rayon::join(
+                        || transpose_join(head, squares, cols),
+                        || transpose(tail, (remainder, cols)),
+                    );
+                }
+
+                // Merge remainder into big matrix.
+                shuffle(values, squares * cols, remainder, cols);
+            }
+        } else {
+            // Divide into (rows × rows) squares and remainder
+            let (squares, remainder) = (cols / rows, cols % rows);
+            if remainder == 0 {
+                partition_transpose(values, squares, rows);
+            } else {
+                // Split remainder from matrix.
+                unshuffle(values, squares * rows, remainder, rows);
+                let (head, tail) = values.split_at_mut(squares * rows * rows);
+
+                if !self.parallel {
+                    // Partition and transpose the squares
+                    partition_transpose(head, squares, rows);
+
+                    // Transpose remainder
+                    transpose(tail, (rows, remainder));
+                } else {
+                    rayon::join(
+                        || partition_transpose(head, squares, rows),
+                        || transpose(tail, (rows, remainder)),
+                    );
+                }
+            }
+        }
+    }
+}
 
 pub fn transpose<T: Copy + Send + Sync>(values: &mut [T], (rows, cols): (usize, usize)) {
     const COPY_THRESHOLD: usize = if !cfg!(test) { 1 << 14 } else { 4 };

@@ -18,7 +18,7 @@ pub mod convolve;
 pub mod divisors;
 pub mod field;
 pub mod ntt;
-pub mod ntt2;
+// pub mod ntt2;
 pub mod permute;
 pub mod utils;
 
@@ -42,7 +42,7 @@ pub mod bench {
     pub fn group(criterion: &mut Criterion) {
         field::bench::group(criterion);
         ntt::bench::group(criterion);
-        ntt2::bench::group(criterion);
+        // ntt2::bench::group(criterion);
     }
 
     pub fn rand_vec<T>(size: usize) -> Vec<T>

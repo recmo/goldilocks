@@ -11,14 +11,6 @@ use core::{
     ops::{Index, IndexMut},
 };
 
-pub trait Ntt: Sync + Send {
-    fn len(&self) -> usize;
-
-    // OPT: We could also have the stride stored in the structure, and just pass raw
-    // pointers down the tree.
-    fn ntt(&self, values: Vector);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

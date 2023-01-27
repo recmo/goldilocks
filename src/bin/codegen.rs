@@ -201,8 +201,7 @@ fn main() {
     let sizes = divisors()
         .iter()
         .map(|n| *n as usize)
-        .filter(|&s| (2..=256).contains(&s))
-        .filter(|&s| s != 102) // This one crashes rustc
+        .filter(|&s| (2..=128).contains(&s))
         .collect::<Vec<_>>();
 
     // Generate header and dispatch function

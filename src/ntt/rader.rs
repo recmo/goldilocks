@@ -1,5 +1,78 @@
 use crate::{ntt::small, utils::modexp, Field};
-use std::sync::Once;
+use std::sync::{Arc, Once};
+
+use super::Ntt;
+
+pub struct Rader {
+    size:     usize,
+    pi:       Vec<usize>,
+    ki:       Vec<usize>,
+    twiddles: Vec<Field>,
+    inner:    Arc<dyn Ntt>,
+}
+
+impl Rader {
+    pub fn new(size: usize) -> Self {
+        let (gi, gk) = parameters(size);
+
+        let inner = super::strategy(size - 1);
+
+        let mut pi = vec![0; size - 1];
+        let mut ki = vec![0; size - 1];
+        let mut twiddles = vec![Field::new(0); size - 1];
+
+        let root = Field::root(size as u64).unwrap();
+        let scale = Field::from((size - 1) as u64).inv();
+        for i in 0..size - 1 {
+            pi[i] = modexp(gi, i, size);
+            ki[i] = modexp(gk, i, size);
+            twiddles[i] = root.pow(pi[i] as u64) * scale;
+        }
+        inner.ntt(twiddles.as_mut_slice());
+
+        Self {
+            size,
+            pi,
+            ki,
+            twiddles,
+            inner,
+        }
+    }
+}
+
+impl Ntt for Rader {
+    fn len(&self) -> usize {
+        self.size
+    }
+
+    fn ntt(&self, values: &mut [Field]) {
+        // Input permutation and NTT
+        let mut buffer = Vec::with_capacity(self.size);
+        buffer.extend(self.ki.iter().map(|&i| values[i]));
+
+        // Inner NTT
+        self.inner.ntt(&mut buffer);
+
+        // Apply constants, twiddles and scale factor.
+        let x0 = values[0];
+        values[0] += buffer[0];
+        buffer
+            .iter_mut()
+            .zip(self.twiddles.iter())
+            .for_each(|(b, &t)| *b *= t);
+        buffer[0] += x0;
+
+        // Transform back
+        buffer[1..].reverse();
+        self.inner.ntt(&mut buffer);
+
+        // Permute into results
+        self.pi
+            .iter()
+            .zip(buffer.iter())
+            .for_each(|(&i, &b)| values[i] = b);
+    }
+}
 
 // (pi, ki, twiddle) values for the Rader NTT of size 257.
 static mut RADER_257: ([usize; 256], [usize; 256], [Field; 256]) =

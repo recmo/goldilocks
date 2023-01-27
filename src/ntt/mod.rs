@@ -4,9 +4,85 @@ pub mod naive;
 pub mod rader;
 pub mod small;
 
-use crate::Field;
+use crate::{divisors::is_divisor, Field};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
+
+static CACHE: Mutex<BTreeMap<usize, Arc<dyn Ntt>>> = Mutex::new(BTreeMap::new());
+
+pub trait Ntt: Sync + Send {
+    fn len(&self) -> usize;
+
+    // OPT: We could also have the stride stored in the structure, and just pass raw
+    // pointers down the tree.
+    fn ntt(&self, values: &mut [Field]);
+}
+
+impl Ntt for Arc<dyn Ntt> {
+    fn len(&self) -> usize {
+        self.as_ref().len()
+    }
+
+    fn ntt(&self, values: &mut [Field]) {
+        self.as_ref().ntt(values)
+    }
+}
+
+pub fn strategy(size: usize) -> Arc<dyn Ntt> {
+    let lock = CACHE.lock().unwrap();
+    if let Some(ntt) = lock.get(&size) {
+        return ntt.clone();
+    }
+    drop(lock);
+
+    assert!(
+        is_divisor(size),
+        "{size} is not a supported NTT size (does not divide multiplicative order)"
+    );
+
+    let ntt = if size <= 128 {
+        Arc::new(SmallNtt::new(size)) as Arc<dyn Ntt>
+    } else if size == 17 || size == 257 || size == 65537 {
+        Arc::new(rader::Rader::new(size)) as Arc<dyn Ntt>
+    } else {
+        Arc::new(cooley_tukey::CooleyTukey::new(size)) as Arc<dyn Ntt>
+    };
+
+    assert_eq!(ntt.len(), size);
+
+    let mut lock = CACHE.lock().unwrap();
+    lock.insert(size, ntt.clone());
+    ntt
+}
+
+pub struct SmallNtt(usize);
+
+impl SmallNtt {
+    pub fn new(size: usize) -> Self {
+        assert!(size <= 128);
+        Self(size)
+    }
+}
+
+// OPT: This has double indirection.
+impl Ntt for SmallNtt {
+    fn len(&self) -> usize {
+        self.0
+    }
+
+    fn ntt(&self, values: &mut [Field]) {
+        debug_assert_eq!(values.len(), self.0);
+        small::ntt(values);
+    }
+}
 
 pub fn ntt(values: &mut [Field]) {
+    let strat = strategy(values.len());
+    strat.ntt(values);
+    return;
+
     // Try an optimized small NTT.
     if small::ntt(values) {
         return;

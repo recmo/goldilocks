@@ -57,6 +57,11 @@ RUSTDOCFLAGS="-Z unstable-options --show-coverage"  cargo doc --workspace --all-
 ```
 
 ```
+cargo run --bin codegen > small.rs && mv small.rs src/ntt && cargo test ntt::small
+```
+
+
+```
 cargo run --bin codegen2 > small.rs && mv small.rs src/ntt2 && cargo test ntt2::small
 ```
 

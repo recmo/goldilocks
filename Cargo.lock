@@ -305,6 +305,7 @@ dependencies = [
  "serde",
  "tracing",
  "tracing-subscriber",
+ "winter-math",
 ]
 
 [[package]]
@@ -1138,3 +1139,21 @@ name = "windows_x86_64_msvc"
 version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40009d85759725a34da6d89a94e63d7bdc50a862acf0dbc7c8e488f1edcb6f5"
+
+[[package]]
+name = "winter-math"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "824b459961e5d679a1eb62ec1a71c85ac25c5d3bfd126874fcd32b591202d896"
+dependencies = [
+ "winter-utils",
+]
+
+[[package]]
+name = "winter-utils"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f0dbf7ca6aa5893b59928718bf1e7dbe7279bb277b5aa4c4898ddf5004f9417"
+dependencies = [
+ "rayon",
+]

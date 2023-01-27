@@ -63,7 +63,10 @@ fn main() {
         // Benchmark
         let duration = match cli.algo {
             Algorithm::Naive => time(|| ntt::naive::ntt(input)),
-            Algorithm::Ntt => time(|| ntt::ntt(input)),
+            Algorithm::Ntt => {
+                let strat = ntt::strategy(size);
+                time(|| strat.ntt(input))
+            }
             Algorithm::Inverse => time(|| ntt::intt(input)),
             Algorithm::Small => {
                 if !ntt::small::ntt(input) {
