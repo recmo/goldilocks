@@ -1,9 +1,10 @@
-pub mod cooley_tukey;
-pub mod good_thomas;
+mod cooley_tukey;
+mod good_thomas;
 pub mod naive;
-pub mod rader;
+mod rader;
 pub mod small;
 
+use self::{cooley_tukey::CooleyTukey, good_thomas::GoodThomas, rader::Rader};
 use crate::{
     divisors::{is_divisor, split},
     utils::gcd,
@@ -49,17 +50,16 @@ pub fn strategy(size: usize) -> Arc<dyn Ntt> {
     let ntt = if size <= 128 {
         Arc::new(SmallNtt::new(size)) as Arc<dyn Ntt>
     } else if size == 17 || size == 257 || size == 65537 {
-        Arc::new(rader::Rader::new(size)) as Arc<dyn Ntt>
+        Arc::new(Rader::new(size)) as Arc<dyn Ntt>
     } else {
         let a = split(size);
         let b = size / a;
         if gcd(a, b) == 1 {
-            Arc::new(good_thomas::GoodThomas::new(a, b)) as Arc<dyn Ntt>
+            Arc::new(GoodThomas::new(a, b)) as Arc<dyn Ntt>
         } else {
-            Arc::new(cooley_tukey::CooleyTukey::new(size)) as Arc<dyn Ntt>
+            Arc::new(CooleyTukey::new(a, b)) as Arc<dyn Ntt>
         }
     };
-
     assert_eq!(ntt.len(), size);
 
     let mut lock = CACHE.lock().unwrap();
@@ -92,21 +92,6 @@ pub fn ntt(values: &mut [Field]) {
     let strat = strategy(values.len());
     strat.ntt(values);
     return;
-
-    // Try an optimized small NTT.
-    if small::ntt(values) {
-        return;
-    }
-
-    // Use Rader for prime sizes. (2,3,5 are also covered by `small::ntt`.)
-    let n = values.len();
-    if n == 2 || n == 3 || n == 5 || n == 17 || n == 257 || n == 65537 {
-        rader::ntt(values);
-        return;
-    }
-
-    // Recurse using Cooley-Tukey.
-    cooley_tukey::ntt(values);
 }
 
 pub fn intt(values: &mut [Field]) {
@@ -131,6 +116,19 @@ pub fn intt(values: &mut [Field]) {
 mod tests {
     use super::*;
     use rand::{rngs::StdRng, Rng, SeedableRng};
+
+    /// Test `f` by comparing to naive implementation
+    #[track_caller]
+    pub fn test_ntt(ntt: impl Ntt) {
+        let mut rng = StdRng::seed_from_u64(Field::MODULUS);
+        let mut values = (0..ntt.len()).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut expected = values.clone();
+        naive::ntt(&mut expected);
+        ntt.ntt(&mut values);
+        for (&value, expected) in values.iter().zip(expected) {
+            assert_eq!(value, expected);
+        }
+    }
 
     /// Test `f` by comparing to naive implementation
     #[track_caller]

@@ -1,7 +1,7 @@
 use goldilocks_ntt::{
     divisors::{divisors, split},
     permute::transpose_copy,
-    utils::{gcd, modexp},
+    utils::{gcd, modexp, modinv},
     Field,
 };
 
@@ -70,7 +70,15 @@ fn rader(vars: &mut [&str]) {
     let n = vars.len();
 
     // Construct permutations.
-    let (gi, gk) = goldilocks_ntt::ntt::rader::parameters(n);
+    let (gi, gk) = match n {
+        2 => (1, 1),
+        3 => (2, 2),
+        5 => (2, 3),
+        17 => (3, 6),
+        257 => (3, 86),
+        65537 => (3, 21846),
+        _ => panic!("Size {n} not supported by Rader NTT"),
+    };
     let pi = |i| modexp(gi, i, n);
     let pk = |i| modexp(gk, i, n);
 
@@ -89,7 +97,18 @@ fn rader(vars: &mut [&str]) {
     println!("    let {} = {} + {};", vars[0], vars[0], buffer[0]);
 
     // Apply twiddles
-    let twiddles = goldilocks_ntt::ntt::rader::twiddles(n, pi);
+    let twiddles = {
+        let mut twiddles = vec![Field::new(0); n - 1];
+        let root = Field::root(n as u64).unwrap();
+        let scale = Field::from((n - 1) as u64).inv();
+        for i in 0..n - 1 {
+            let pi = modexp(gi, i, n);
+            twiddles[i] = root.pow(pi as u64) * scale;
+        }
+        goldilocks_ntt::ntt::ntt(twiddles.as_mut_slice());
+        twiddles
+    };
+
     for (i, t) in twiddles.iter().enumerate() {
         let v = buffer[i];
         println!("    let {v} = {v} * Field::new({t});");
@@ -143,7 +162,10 @@ fn good_thomas(vars: &mut [&str], (a, b): (usize, usize)) {
     debug_assert_eq!(vars.len(), n);
     assert!(a >= 2 && b >= 2);
 
-    let (k1, k2, k3, k4) = goldilocks_ntt::ntt::good_thomas::parameters(a, b);
+    // Find parameters
+    // See C.S. Burrus (2018) eq. (10.5).
+    let (k1, k2) = (b, a);
+    let (k3, k4) = (modinv(b, a) * b, modinv(a, b) * a);
     let permute_i = |i| {
         let (i1, i2) = (i / b, i % b);
         (i1 * k1 + i2 * k2) % n
