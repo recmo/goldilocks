@@ -4,7 +4,7 @@ pub mod naive;
 pub mod rader;
 pub mod small;
 
-use crate::{divisors::is_divisor, Field};
+use crate::{divisors::{is_divisor, split}, Field, utils::gcd};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -47,7 +47,13 @@ pub fn strategy(size: usize) -> Arc<dyn Ntt> {
     } else if size == 17 || size == 257 || size == 65537 {
         Arc::new(rader::Rader::new(size)) as Arc<dyn Ntt>
     } else {
-        Arc::new(cooley_tukey::CooleyTukey::new(size)) as Arc<dyn Ntt>
+        let a = split(size);
+        let b = size / a;
+        if gcd(a, b) == 1 {
+            Arc::new(good_thomas::GoodThomas::new(a, b)) as Arc<dyn Ntt>
+        } else {
+            Arc::new(cooley_tukey::CooleyTukey::new(size)) as Arc<dyn Ntt>
+        }
     };
 
     assert_eq!(ntt.len(), size);

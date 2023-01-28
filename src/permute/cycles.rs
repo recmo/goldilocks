@@ -1,8 +1,12 @@
 use super::Permute;
 use rayon::prelude::*;
 use std::{
+    collections::BTreeMap,
     fmt,
-    sync::{atomic::{AtomicPtr, Ordering}, Arc}, collections::BTreeMap,
+    sync::{
+        atomic::{AtomicPtr, Ordering},
+        Arc,
+    },
 };
 
 pub struct Cycles<I: Index> {
@@ -17,7 +21,10 @@ pub trait Index: 'static + Copy + Send + Sync {
     fn to(self) -> usize;
 }
 
-pub fn from_fn<T: 'static + Copy + Send + Sync>(size: usize, permutation: impl Fn(usize) -> usize) -> Arc<dyn Permute<T>> {
+pub fn from_fn<T: 'static + Copy + Send + Sync>(
+    size: usize,
+    permutation: impl Fn(usize) -> usize,
+) -> Arc<dyn Permute<T>> {
     if size <= u16::MAX as usize {
         Arc::new(Cycles::<u16>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
     } else if size <= u32::MAX as usize {
@@ -55,7 +62,10 @@ impl<I: Index> Cycles<I> {
 
             // Add non-trivial cycles to the collection.
             if cycle.len() > 1 {
-                cycles.entry(cycle.len()).or_default().extend(cycle.drain(..).rev());
+                cycles
+                    .entry(cycle.len())
+                    .or_default()
+                    .extend(cycle.drain(..).rev());
             } else {
                 cycle.clear();
             }
@@ -106,26 +116,24 @@ impl<I: Index> Cycles<I> {
         // parallel. For this we need to use a pointer we can share between threads.
         let values = AtomicPtr::new(values.as_mut_ptr());
 
-        self.cycles
-            .par_iter()
-            .for_each(|(length, cycles)| {
-                debug_assert!(*length >= 2);
-                debug_assert_eq!(cycles.len() % *length, 0);
-                cycles.par_chunks_exact(*length).for_each(|cycle| {
-                    let values = values.load(Ordering::Relaxed);
-                    unsafe {
-                        // SAFETY: We know cycles has length `length` >= 2 and contains
-                        // only valid non-overlapping indices into `values`.
-                        let mut dst = cycle.get_unchecked(0).to();
-                        let temp = *values.add(dst);
-                        for src in cycle.iter().skip(1).map(|i| i.to()) {
-                            *values.add(dst) = *values.add(src);
-                            dst = src;
-                        }
-                        *values.add(dst) = temp;
+        self.cycles.par_iter().for_each(|(length, cycles)| {
+            debug_assert!(*length >= 2);
+            debug_assert_eq!(cycles.len() % *length, 0);
+            cycles.par_chunks_exact(*length).for_each(|cycle| {
+                let values = values.load(Ordering::Relaxed);
+                unsafe {
+                    // SAFETY: We know cycles has length `length` >= 2 and contains
+                    // only valid non-overlapping indices into `values`.
+                    let mut dst = cycle.get_unchecked(0).to();
+                    let temp = *values.add(dst);
+                    for src in cycle.iter().skip(1).map(|i| i.to()) {
+                        *values.add(dst) = *values.add(src);
+                        dst = src;
                     }
-                });
+                    *values.add(dst) = temp;
+                }
             });
+        });
     }
 }
 
