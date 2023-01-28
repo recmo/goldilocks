@@ -1,39 +1,54 @@
-use crate::{ntt::small, utils::modexp, Field};
+use super::Ntt;
+use crate::{
+    ntt::small,
+    permute::{cycles, Permute},
+    utils::modexp,
+    Field,
+};
 use std::sync::{Arc, Once};
 
-use super::Ntt;
-
 pub struct Rader {
-    size:     usize,
-    pi:       Vec<usize>,
-    ki:       Vec<usize>,
-    twiddles: Vec<Field>,
-    inner:    Arc<dyn Ntt>,
+    size:       usize,
+    permute_pi: Arc<dyn Permute<Field>>,
+    permute_ki: Arc<dyn Permute<Field>>,
+    inner:      Arc<dyn Ntt>,
+    twiddles:   Vec<Field>,
 }
 
 impl Rader {
     pub fn new(size: usize) -> Self {
         let (gi, gk) = parameters(size);
 
+        // Permutations
+        let permute_pi = Arc::new(cycles::from_fn(size, |i| {
+            if i == 0 {
+                0
+            } else {
+                modexp(gi, i - 1, size)
+            }
+        }));
+        let permute_ki = Arc::new(cycles::from_fn(size, |i| {
+            if i == 0 {
+                0
+            } else {
+                modexp(gk, i - 1, size)
+            }
+        }));
         let inner = super::strategy(size - 1);
 
-        let mut pi = vec![0; size - 1];
-        let mut ki = vec![0; size - 1];
         let mut twiddles = vec![Field::new(0); size - 1];
-
         let root = Field::root(size as u64).unwrap();
         let scale = Field::from((size - 1) as u64).inv();
         for i in 0..size - 1 {
-            pi[i] = modexp(gi, i, size);
-            ki[i] = modexp(gk, i, size);
-            twiddles[i] = root.pow(pi[i] as u64) * scale;
+            let pi = modexp(gi, i, size);
+            twiddles[i] = root.pow(pi as u64) * scale;
         }
         inner.ntt(twiddles.as_mut_slice());
 
         Self {
             size,
-            pi,
-            ki,
+            permute_pi,
+            permute_ki,
             twiddles,
             inner,
         }
@@ -46,31 +61,27 @@ impl Ntt for Rader {
     }
 
     fn ntt(&self, values: &mut [Field]) {
-        // Input permutation and NTT
-        let mut buffer = Vec::with_capacity(self.size);
-        buffer.extend(self.ki.iter().map(|&i| values[i]));
+        // Input permutation.
+        self.permute_pi.permute(values);
 
         // Inner NTT
-        self.inner.ntt(&mut buffer);
+        self.inner.ntt(&mut values[1..]);
 
         // Apply constants, twiddles and scale factor.
         let x0 = values[0];
-        values[0] += buffer[0];
-        buffer
+        values[0] += values[1];
+        values[1..]
             .iter_mut()
             .zip(self.twiddles.iter())
             .for_each(|(b, &t)| *b *= t);
-        buffer[0] += x0;
+        values[1] += x0;
 
-        // Transform back
-        buffer[1..].reverse();
-        self.inner.ntt(&mut buffer);
+        // Transform back (scale factor already applied)
+        values[1..].reverse();
+        self.inner.ntt(&mut values[1..]);
 
-        // Permute into results
-        self.pi
-            .iter()
-            .zip(buffer.iter())
-            .for_each(|(&i, &b)| values[i] = b);
+        // Output permutation
+        self.permute_ki.permute(values);
     }
 }
 

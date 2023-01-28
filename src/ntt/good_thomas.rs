@@ -1,8 +1,4 @@
 //! The Good-Thomas or Prime Factor FFT algorithm.
-//!
-//! If the length of the input is smooth then this method won't be used
-//! directly, but only as part of the codelets, as there wil allways be a factor
-//! 2 in the split.
 use super::Ntt;
 use crate::{
     divisors::split,
@@ -59,6 +55,7 @@ impl GoodThomas {
         debug_assert_eq!((k2 * k4) % n, n1);
 
         // Create permutations
+        // TODO: For large splits (say 8192×65537) Cycles takes a lot of memory.
         let permute_i = cycles::from_fn(n, |i| {
             let (i1, i2) = (i / n2, i % n2);
             (i1 * k1 + i2 * k2) % n
@@ -94,7 +91,10 @@ impl Ntt for GoodThomas {
         );
         let (n1, n2) = self.split;
 
+        // Input permutation.
         self.permute_i.permute(values);
+
+        // First inner NTT.
         if !self.parallel {
             values
                 .chunks_exact_mut(n2)
@@ -104,7 +104,11 @@ impl Ntt for GoodThomas {
                 .par_chunks_exact_mut(n2)
                 .for_each(|values| self.inner_n2.ntt(values));
         }
+
+        // Transpose.
         self.transpose.permute(values);
+
+        // Second inner NTT.
         if !self.parallel {
             values
                 .chunks_exact_mut(n1)
@@ -114,6 +118,8 @@ impl Ntt for GoodThomas {
                 .par_chunks_exact_mut(n1)
                 .for_each(|values| self.inner_n1.ntt(values));
         }
+
+        // Output permutation.
         self.permute_k.permute(values);
     }
 }

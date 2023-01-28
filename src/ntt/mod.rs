@@ -4,7 +4,11 @@ pub mod naive;
 pub mod rader;
 pub mod small;
 
-use crate::{divisors::{is_divisor, split}, Field, utils::gcd};
+use crate::{
+    divisors::{is_divisor, split},
+    utils::gcd,
+    Field,
+};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
