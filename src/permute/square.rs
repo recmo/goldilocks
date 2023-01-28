@@ -4,6 +4,27 @@ use std::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
+use super::Permute;
+
+pub struct SquareTranspose(usize);
+
+impl SquareTranspose {
+    pub fn new(size: usize) -> Self {
+        Self(size)
+    }
+}
+
+impl<T: 'static + Copy + Send + Sync> Permute<T> for SquareTranspose {
+    fn len(&self) -> usize {
+        self.0 * self.0
+    }
+
+    fn permute(&self, values: &mut [T]) {
+        assert_eq!(values.len(), self.0 * self.0);
+        transpose(values, self.0);
+    }
+}
+
 pub fn transpose<T: Copy>(values: &mut [T], size: usize) {
     // eprintln!("square::transpose({size})");
     assert_eq!(values.len(), size * size);

@@ -25,31 +25,19 @@ impl<T: 'static + Copy + Send + Sync> Permute<T> for Arc<dyn Permute<T>> {
     }
 }
 
+/// Generate a strategy for transposing matrices of the given size.
 pub fn transpose_strategy<T: 'static + Copy + Send + Sync>(
     (rows, cols): (usize, usize),
 ) -> Arc<dyn Permute<T> + 'static> {
     let size = rows * cols;
 
     if rows == cols {
-        Arc::new(SquareTranspose(rows)) as Arc<dyn Permute<T>>
-    } else if size <= 1 << 32 {
+        Arc::new(SquareTranspose::new(rows)) as Arc<dyn Permute<T>>
+    } else if size <= 1 << 20 {
         let permute = permutation::transpose(rows, cols);
         cycles::from_fn(size, permute)
     } else {
         Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
-    }
-}
-
-pub struct SquareTranspose(usize);
-
-impl<T: 'static + Copy + Send + Sync> Permute<T> for SquareTranspose {
-    fn len(&self) -> usize {
-        self.0 * self.0
-    }
-
-    fn permute(&self, values: &mut [T]) {
-        assert_eq!(values.len(), self.0 * self.0);
-        square::transpose(values, self.0);
     }
 }
 
