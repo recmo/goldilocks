@@ -36,7 +36,7 @@ pub fn from_fn<T: 'static + Copy + Send + Sync>(
 
 impl<I: Index> Cycles<I> {
     pub fn from_fn(size: usize, permutation: impl Fn(usize) -> usize) -> Self {
-        assert!(size <= I::max(), "Invalid index type for size.");
+        assert!((size - 1) <= I::max(), "Invalid index type for size.");
         let mut cycles = BTreeMap::<usize, Vec<I>>::new();
         let mut done = vec![false; size];
         let mut cycle = Vec::new();
@@ -75,6 +75,16 @@ impl<I: Index> Cycles<I> {
             size,
             cycles,
             parallel: size > 1 << 21,
+        }
+    }
+
+    pub fn invert(&mut self) {
+        for (length, cycles) in self.cycles.iter_mut() {
+            debug_assert!(*length >= 2);
+            debug_assert_eq!(cycles.len() % *length, 0);
+            for cycle in cycles.chunks_exact_mut(*length) {
+                cycle.reverse();
+            }
         }
     }
 

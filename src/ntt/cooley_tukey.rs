@@ -153,35 +153,30 @@ impl Ntt for CooleyTukey {
 
 #[cfg(test)]
 mod tests {
-    use crate::ntt::good_thomas::GoodThomas;
-
-    use super::{
-        super::{naive, tests::test_ntt},
-        *,
-    };
+    use super::{super::tests::test_ntt, *};
 
     #[test]
     fn test_4x4() {
-        test_ntt(GoodThomas::new(4, 4));
+        test_ntt(CooleyTukey::new(4, 4));
     }
 
     #[test]
     fn test_16x16() {
-        test_ntt(GoodThomas::new(16, 16));
+        test_ntt(CooleyTukey::new(16, 16));
     }
 
     #[test]
     fn test_32x32() {
-        test_ntt(GoodThomas::new(32, 32));
+        test_ntt(CooleyTukey::new(32, 32));
     }
 
     #[test]
     fn test_16x24() {
-        test_ntt(GoodThomas::new(16, 24));
+        test_ntt(CooleyTukey::new(16, 24));
     }
 
     #[test]
     fn test_4x64() {
-        test_ntt(GoodThomas::new(16, 24));
+        test_ntt(CooleyTukey::new(16, 24));
     }
 }

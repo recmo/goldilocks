@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 pub struct Rader {
     size:       usize,
-    permute_pi: Arc<dyn Permute<Field>>,
-    permute_ki: Arc<dyn Permute<Field>>,
+    permute_i: Arc<dyn Permute<Field>>,
+    permute_k: Arc<dyn Permute<Field>>,
     inner:      Arc<dyn Ntt>,
     twiddles:   Vec<Field>,
 }
@@ -18,8 +18,8 @@ impl Rader {
     pub fn new(size: usize) -> Self {
         // Hardcoded parameters for the prime factors.
         let (gi, gk): (usize, usize) = match size {
-            2 => (1, 1),
-            3 => (2, 2),
+            2 => (1, 1), // No-op
+            3 => (2, 2), // No-op
             5 => (2, 3),
             17 => (3, 6),
             257 => (3, 86),
@@ -31,20 +31,13 @@ impl Rader {
         debug_assert_eq!(modexp(gk, size / 2, size), size - 1);
 
         // Permutations
-        let permute_pi = Arc::new(cycles::from_fn(size, |i| {
-            if i == 0 {
-                0
-            } else {
-                modexp(gi, i - 1, size)
-            }
-        }));
-        let permute_ki = Arc::new(cycles::from_fn(size, |i| {
-            if i == 0 {
-                0
-            } else {
-                modexp(gk, i - 1, size)
-            }
-        }));
+        let permute_i = cycles::Cycles::<u16>::from_fn(size - 1, |i| {
+            modexp(gi, i, size) - 1
+        });
+        let mut permute_k = cycles::Cycles::<u16>::from_fn(size - 1, |i| {
+            modexp(gk, i, size) - 1
+        });
+        permute_k.invert();
         let inner = super::strategy(size - 1);
 
         // Twiddles
@@ -59,8 +52,8 @@ impl Rader {
 
         Self {
             size,
-            permute_pi,
-            permute_ki,
+            permute_i: Arc::new(permute_i) as Arc<dyn Permute<Field>>,
+            permute_k: Arc::new(permute_k) as Arc<dyn Permute<Field>>,
             twiddles,
             inner,
         }
@@ -73,27 +66,30 @@ impl Ntt for Rader {
     }
 
     fn ntt(&self, values: &mut [Field]) {
+        assert_eq!(values.len(), self.size);
+        let (first, convolve) = values.split_first_mut().unwrap();
+
         // Input permutation.
-        self.permute_pi.permute(values);
+        self.permute_k.permute(convolve);
 
         // Inner NTT
-        self.inner.ntt(&mut values[1..]);
+        self.inner.ntt(convolve);
 
         // Apply constants, twiddles and scale factor.
-        let x0 = values[0];
-        values[0] += values[1];
-        values[1..]
+        let x0 = *first;
+        *first += convolve[0];
+        convolve
             .iter_mut()
             .zip(self.twiddles.iter())
             .for_each(|(b, &t)| *b *= t);
-        values[1] += x0;
+        convolve[0] += x0;
 
         // Transform back (scale factor already applied)
-        values[1..].reverse();
-        self.inner.ntt(&mut values[1..]);
+        convolve[1..].reverse();
+        self.inner.ntt(convolve);
 
         // Output permutation
-        self.permute_ki.permute(values);
+        self.permute_i.permute(convolve);
     }
 }
 
