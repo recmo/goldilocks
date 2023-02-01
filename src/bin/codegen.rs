@@ -235,21 +235,25 @@ fn main() {
     clippy::unreadable_literal,
     clippy::too_many_lines
 )]
+use super::{{Ntt, NttFn}};
 use crate::Field;
+use std::sync::Arc;
 
-/// Apply a small NTT to `values`, or return `false` if the size is not supported.
-pub fn ntt(values: &mut [Field]) -> bool {{
-    match values.len() {{
-        ..=1 => return true,"
+pub fn ntt(size: usize) -> Option<Arc<dyn Ntt>> {{
+    let f = match size {{
+        0 | 1 => ntt_01,"
     );
     for s in &sizes {
-        println!("        {s} => ntt_{s}(values),");
+        println!("        {s} => ntt_{s},");
     }
     println!(
-        "        _ => return false,
-    }}
-    true
+        "        _ => return None,
+    }};
+    Some(Arc::new(NttFn::new(size, f)))
 }}
+
+pub fn ntt_01(_values: &mut [Field]) {{}}
+
 "
     );
 
@@ -267,14 +271,8 @@ pub fn ntt(values: &mut [Field]) -> bool {{
     println!(
         "#[cfg(test)]
 mod tests {{
-    use super::{{super::tests::test_ntt_fn, *}};
-
-    #[test]
-    fn test_small_ntt() {{
-        for size in [0, 1, {size_list}] {{
-            test_ntt_fn(|values| assert!(ntt(values)), size);
-        }}
-    }}"
+    use super::{{super::tests::test_ntt, *}};
+    "
     );
 
     for s in &sizes {
@@ -282,7 +280,7 @@ mod tests {{
             r#"
     #[test]
     fn test_ntt_{s}() {{
-        test_ntt_fn(ntt_{s}, {s});
+        test_ntt(ntt({s}).unwrap());
     }}"#
         );
     }
@@ -299,7 +297,7 @@ pub mod bench {{
     pub fn group(criterion: &mut Criterion) {{"#
     );
     for s in &sizes {
-        println!("        bench_ntt(criterion, \"small\", ntt_{s}, {s});");
+        println!("        bench_ntt(criterion, \"small\", ntt({s}).unwrap());");
     }
     println!("    }}");
     println!("}}");

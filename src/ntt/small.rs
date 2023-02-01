@@ -5,45 +5,47 @@
     clippy::unreadable_literal,
     clippy::too_many_lines
 )]
+use super::{Ntt, NttFn};
 use crate::Field;
+use std::sync::Arc;
 
-/// Apply a small NTT to `values`, or return `false` if the size is not
-/// supported.
-pub fn ntt(values: &mut [Field]) -> bool {
-    match values.len() {
-        ..=1 => return true,
-        2 => ntt_2(values),
-        3 => ntt_3(values),
-        4 => ntt_4(values),
-        5 => ntt_5(values),
-        6 => ntt_6(values),
-        8 => ntt_8(values),
-        10 => ntt_10(values),
-        12 => ntt_12(values),
-        15 => ntt_15(values),
-        16 => ntt_16(values),
-        17 => ntt_17(values),
-        20 => ntt_20(values),
-        24 => ntt_24(values),
-        30 => ntt_30(values),
-        32 => ntt_32(values),
-        34 => ntt_34(values),
-        40 => ntt_40(values),
-        48 => ntt_48(values),
-        51 => ntt_51(values),
-        60 => ntt_60(values),
-        64 => ntt_64(values),
-        68 => ntt_68(values),
-        80 => ntt_80(values),
-        85 => ntt_85(values),
-        96 => ntt_96(values),
-        102 => ntt_102(values),
-        120 => ntt_120(values),
-        128 => ntt_128(values),
-        _ => return false,
-    }
-    true
+pub fn ntt(size: usize) -> Option<Arc<dyn Ntt>> {
+    let f = match size {
+        0 | 1 => ntt_01,
+        2 => ntt_2,
+        3 => ntt_3,
+        4 => ntt_4,
+        5 => ntt_5,
+        6 => ntt_6,
+        8 => ntt_8,
+        10 => ntt_10,
+        12 => ntt_12,
+        15 => ntt_15,
+        16 => ntt_16,
+        17 => ntt_17,
+        20 => ntt_20,
+        24 => ntt_24,
+        30 => ntt_30,
+        32 => ntt_32,
+        34 => ntt_34,
+        40 => ntt_40,
+        48 => ntt_48,
+        51 => ntt_51,
+        60 => ntt_60,
+        64 => ntt_64,
+        68 => ntt_68,
+        80 => ntt_80,
+        85 => ntt_85,
+        96 => ntt_96,
+        102 => ntt_102,
+        120 => ntt_120,
+        128 => ntt_128,
+        _ => return None,
+    };
+    Some(Arc::new(NttFn::new(size, f)))
 }
+
+pub fn ntt_01(_values: &mut [Field]) {}
 
 /// Size 2 NTT.
 ///
@@ -10540,156 +10542,146 @@ pub fn ntt_128(values: &mut [Field]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::tests::test_ntt_fn, *};
-
-    #[test]
-    fn test_small_ntt() {
-        for size in [
-            0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 17, 20, 24, 30, 32, 34, 40, 48, 51, 60, 64, 68,
-            80, 85, 96, 102, 120, 128,
-        ] {
-            test_ntt_fn(|values| assert!(ntt(values)), size);
-        }
-    }
+    use super::{super::tests::test_ntt, *};
 
     #[test]
     fn test_ntt_2() {
-        test_ntt_fn(ntt_2, 2);
+        test_ntt(ntt(2).unwrap());
     }
 
     #[test]
     fn test_ntt_3() {
-        test_ntt_fn(ntt_3, 3);
+        test_ntt(ntt(3).unwrap());
     }
 
     #[test]
     fn test_ntt_4() {
-        test_ntt_fn(ntt_4, 4);
+        test_ntt(ntt(4).unwrap());
     }
 
     #[test]
     fn test_ntt_5() {
-        test_ntt_fn(ntt_5, 5);
+        test_ntt(ntt(5).unwrap());
     }
 
     #[test]
     fn test_ntt_6() {
-        test_ntt_fn(ntt_6, 6);
+        test_ntt(ntt(6).unwrap());
     }
 
     #[test]
     fn test_ntt_8() {
-        test_ntt_fn(ntt_8, 8);
+        test_ntt(ntt(8).unwrap());
     }
 
     #[test]
     fn test_ntt_10() {
-        test_ntt_fn(ntt_10, 10);
+        test_ntt(ntt(10).unwrap());
     }
 
     #[test]
     fn test_ntt_12() {
-        test_ntt_fn(ntt_12, 12);
+        test_ntt(ntt(12).unwrap());
     }
 
     #[test]
     fn test_ntt_15() {
-        test_ntt_fn(ntt_15, 15);
+        test_ntt(ntt(15).unwrap());
     }
 
     #[test]
     fn test_ntt_16() {
-        test_ntt_fn(ntt_16, 16);
+        test_ntt(ntt(16).unwrap());
     }
 
     #[test]
     fn test_ntt_17() {
-        test_ntt_fn(ntt_17, 17);
+        test_ntt(ntt(17).unwrap());
     }
 
     #[test]
     fn test_ntt_20() {
-        test_ntt_fn(ntt_20, 20);
+        test_ntt(ntt(20).unwrap());
     }
 
     #[test]
     fn test_ntt_24() {
-        test_ntt_fn(ntt_24, 24);
+        test_ntt(ntt(24).unwrap());
     }
 
     #[test]
     fn test_ntt_30() {
-        test_ntt_fn(ntt_30, 30);
+        test_ntt(ntt(30).unwrap());
     }
 
     #[test]
     fn test_ntt_32() {
-        test_ntt_fn(ntt_32, 32);
+        test_ntt(ntt(32).unwrap());
     }
 
     #[test]
     fn test_ntt_34() {
-        test_ntt_fn(ntt_34, 34);
+        test_ntt(ntt(34).unwrap());
     }
 
     #[test]
     fn test_ntt_40() {
-        test_ntt_fn(ntt_40, 40);
+        test_ntt(ntt(40).unwrap());
     }
 
     #[test]
     fn test_ntt_48() {
-        test_ntt_fn(ntt_48, 48);
+        test_ntt(ntt(48).unwrap());
     }
 
     #[test]
     fn test_ntt_51() {
-        test_ntt_fn(ntt_51, 51);
+        test_ntt(ntt(51).unwrap());
     }
 
     #[test]
     fn test_ntt_60() {
-        test_ntt_fn(ntt_60, 60);
+        test_ntt(ntt(60).unwrap());
     }
 
     #[test]
     fn test_ntt_64() {
-        test_ntt_fn(ntt_64, 64);
+        test_ntt(ntt(64).unwrap());
     }
 
     #[test]
     fn test_ntt_68() {
-        test_ntt_fn(ntt_68, 68);
+        test_ntt(ntt(68).unwrap());
     }
 
     #[test]
     fn test_ntt_80() {
-        test_ntt_fn(ntt_80, 80);
+        test_ntt(ntt(80).unwrap());
     }
 
     #[test]
     fn test_ntt_85() {
-        test_ntt_fn(ntt_85, 85);
+        test_ntt(ntt(85).unwrap());
     }
 
     #[test]
     fn test_ntt_96() {
-        test_ntt_fn(ntt_96, 96);
+        test_ntt(ntt(96).unwrap());
     }
 
     #[test]
     fn test_ntt_102() {
-        test_ntt_fn(ntt_102, 102);
+        test_ntt(ntt(102).unwrap());
     }
 
     #[test]
     fn test_ntt_120() {
-        test_ntt_fn(ntt_120, 120);
+        test_ntt(ntt(120).unwrap());
     }
 
     #[test]
     fn test_ntt_128() {
-        test_ntt_fn(ntt_128, 128);
+        test_ntt(ntt(128).unwrap());
     }
 }
 
@@ -10700,33 +10692,33 @@ pub mod bench {
     use criterion::Criterion;
 
     pub fn group(criterion: &mut Criterion) {
-        bench_ntt(criterion, "small", ntt_2, 2);
-        bench_ntt(criterion, "small", ntt_3, 3);
-        bench_ntt(criterion, "small", ntt_4, 4);
-        bench_ntt(criterion, "small", ntt_5, 5);
-        bench_ntt(criterion, "small", ntt_6, 6);
-        bench_ntt(criterion, "small", ntt_8, 8);
-        bench_ntt(criterion, "small", ntt_10, 10);
-        bench_ntt(criterion, "small", ntt_12, 12);
-        bench_ntt(criterion, "small", ntt_15, 15);
-        bench_ntt(criterion, "small", ntt_16, 16);
-        bench_ntt(criterion, "small", ntt_17, 17);
-        bench_ntt(criterion, "small", ntt_20, 20);
-        bench_ntt(criterion, "small", ntt_24, 24);
-        bench_ntt(criterion, "small", ntt_30, 30);
-        bench_ntt(criterion, "small", ntt_32, 32);
-        bench_ntt(criterion, "small", ntt_34, 34);
-        bench_ntt(criterion, "small", ntt_40, 40);
-        bench_ntt(criterion, "small", ntt_48, 48);
-        bench_ntt(criterion, "small", ntt_51, 51);
-        bench_ntt(criterion, "small", ntt_60, 60);
-        bench_ntt(criterion, "small", ntt_64, 64);
-        bench_ntt(criterion, "small", ntt_68, 68);
-        bench_ntt(criterion, "small", ntt_80, 80);
-        bench_ntt(criterion, "small", ntt_85, 85);
-        bench_ntt(criterion, "small", ntt_96, 96);
-        bench_ntt(criterion, "small", ntt_102, 102);
-        bench_ntt(criterion, "small", ntt_120, 120);
-        bench_ntt(criterion, "small", ntt_128, 128);
+        bench_ntt(criterion, "small", ntt(2).unwrap());
+        bench_ntt(criterion, "small", ntt(3).unwrap());
+        bench_ntt(criterion, "small", ntt(4).unwrap());
+        bench_ntt(criterion, "small", ntt(5).unwrap());
+        bench_ntt(criterion, "small", ntt(6).unwrap());
+        bench_ntt(criterion, "small", ntt(8).unwrap());
+        bench_ntt(criterion, "small", ntt(10).unwrap());
+        bench_ntt(criterion, "small", ntt(12).unwrap());
+        bench_ntt(criterion, "small", ntt(15).unwrap());
+        bench_ntt(criterion, "small", ntt(16).unwrap());
+        bench_ntt(criterion, "small", ntt(17).unwrap());
+        bench_ntt(criterion, "small", ntt(20).unwrap());
+        bench_ntt(criterion, "small", ntt(24).unwrap());
+        bench_ntt(criterion, "small", ntt(30).unwrap());
+        bench_ntt(criterion, "small", ntt(32).unwrap());
+        bench_ntt(criterion, "small", ntt(34).unwrap());
+        bench_ntt(criterion, "small", ntt(40).unwrap());
+        bench_ntt(criterion, "small", ntt(48).unwrap());
+        bench_ntt(criterion, "small", ntt(51).unwrap());
+        bench_ntt(criterion, "small", ntt(60).unwrap());
+        bench_ntt(criterion, "small", ntt(64).unwrap());
+        bench_ntt(criterion, "small", ntt(68).unwrap());
+        bench_ntt(criterion, "small", ntt(80).unwrap());
+        bench_ntt(criterion, "small", ntt(85).unwrap());
+        bench_ntt(criterion, "small", ntt(96).unwrap());
+        bench_ntt(criterion, "small", ntt(102).unwrap());
+        bench_ntt(criterion, "small", ntt(120).unwrap());
+        bench_ntt(criterion, "small", ntt(128).unwrap());
     }
 }

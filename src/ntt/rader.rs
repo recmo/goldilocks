@@ -7,11 +7,11 @@ use crate::{
 use std::sync::Arc;
 
 pub struct Rader {
-    size:       usize,
+    size:      usize,
     permute_i: Arc<dyn Permute<Field>>,
     permute_k: Arc<dyn Permute<Field>>,
-    inner:      Arc<dyn Ntt>,
-    twiddles:   Vec<Field>,
+    inner:     Arc<dyn Ntt>,
+    twiddles:  Vec<Field>,
 }
 
 impl Rader {
@@ -31,12 +31,8 @@ impl Rader {
         debug_assert_eq!(modexp(gk, size / 2, size), size - 1);
 
         // Permutations
-        let permute_i = cycles::Cycles::<u16>::from_fn(size - 1, |i| {
-            modexp(gi, i, size) - 1
-        });
-        let mut permute_k = cycles::Cycles::<u16>::from_fn(size - 1, |i| {
-            modexp(gk, i, size) - 1
-        });
+        let permute_i = cycles::Cycles::<u16>::from_fn(size - 1, |i| modexp(gi, i, size) - 1);
+        let mut permute_k = cycles::Cycles::<u16>::from_fn(size - 1, |i| modexp(gk, i, size) - 1);
         permute_k.invert();
         let inner = super::strategy(size - 1);
 
@@ -136,11 +132,11 @@ pub mod bench {
     use criterion::Criterion;
 
     pub fn group(criterion: &mut Criterion) {
-        bench_ntt(criterion, "rader", ntt, 2);
-        bench_ntt(criterion, "rader", ntt, 3);
-        bench_ntt(criterion, "rader", ntt, 5);
-        bench_ntt(criterion, "rader", ntt, 17);
-        bench_ntt(criterion, "rader", ntt, 257);
-        bench_ntt(criterion, "rader", ntt, 65537);
+        bench_ntt(criterion, "rader", Rader::new(2));
+        bench_ntt(criterion, "rader", Rader::new(3));
+        bench_ntt(criterion, "rader", Rader::new(5));
+        bench_ntt(criterion, "rader", Rader::new(17));
+        bench_ntt(criterion, "rader", Rader::new(257));
+        bench_ntt(criterion, "rader", Rader::new(65537));
     }
 }

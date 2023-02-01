@@ -48,7 +48,7 @@ pub fn strategy(size: usize) -> Arc<dyn Ntt> {
     );
 
     let ntt = if size <= 128 {
-        Arc::new(SmallNtt::new(size)) as Arc<dyn Ntt>
+        small::ntt(size).unwrap()
     } else if size == 17 || size == 257 || size == 65537 {
         Arc::new(Rader::new(size)) as Arc<dyn Ntt>
     } else {
@@ -67,24 +67,22 @@ pub fn strategy(size: usize) -> Arc<dyn Ntt> {
     ntt
 }
 
-pub struct SmallNtt(usize);
+pub struct NttFn<F: Fn(&mut [Field]) + Send + Sync>(usize, F);
 
-impl SmallNtt {
-    pub fn new(size: usize) -> Self {
-        assert!(size <= 128);
-        Self(size)
+impl<F: Fn(&mut [Field]) + Send + Sync> NttFn<F> {
+    pub fn new(size: usize, f: F) -> Self {
+        Self(size, f)
     }
 }
 
-// OPT: This has double indirection.
-impl Ntt for SmallNtt {
+impl<F: Fn(&mut [Field]) + Send + Sync> Ntt for NttFn<F> {
     fn len(&self) -> usize {
         self.0
     }
 
     fn ntt(&self, values: &mut [Field]) {
         debug_assert_eq!(values.len(), self.0);
-        small::ntt(values);
+        (self.1)(values);
     }
 }
 
@@ -129,19 +127,6 @@ mod tests {
             assert_eq!(value, expected);
         }
     }
-
-    /// Test `f` by comparing to naive implementation
-    #[track_caller]
-    pub fn test_ntt_fn(f: impl Fn(&mut [Field]), size: usize) {
-        let mut rng = StdRng::seed_from_u64(Field::MODULUS);
-        let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
-        let mut expected = values.clone();
-        naive::ntt(&mut expected);
-        f(&mut values);
-        for (&value, expected) in values.iter().zip(expected) {
-            assert_eq!(value, expected);
-        }
-    }
 }
 
 #[cfg(feature = "bench")]
@@ -152,22 +137,17 @@ pub mod bench {
     use rand::{thread_rng, Rng};
 
     pub fn group(criterion: &mut Criterion) {
-        small::bench::group(criterion);
         rader::bench::group(criterion);
+        good_thomas::bench::group(criterion);
     }
 
-    pub fn bench_ntt(
-        criterion: &mut Criterion,
-        name: &str,
-        ntt: impl Fn(&mut [Field]),
-        size: usize,
-    ) {
+    pub fn bench_ntt(criterion: &mut Criterion, name: &str, ntt: impl Ntt) {
         let mut rng = thread_rng();
-        let mut values = (0..size).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut values = (0..ntt.len()).map(|_| rng.gen()).collect::<Vec<_>>();
         let mut group = criterion.benchmark_group("ntt");
-        group.throughput(Throughput::Elements(size as u64));
-        group.bench_function(BenchmarkId::new(name, size), move |bencher| {
-            bencher.iter(|| ntt(&mut values));
+        group.throughput(Throughput::Elements(values.len() as u64));
+        group.bench_function(BenchmarkId::new(name, values.len()), move |bencher| {
+            bencher.iter(|| ntt.ntt(&mut values));
         });
     }
 }

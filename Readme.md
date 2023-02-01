@@ -61,10 +61,6 @@ cargo run --bin codegen > small.rs && mv small.rs src/ntt && cargo test ntt::sma
 ```
 
 
-```
-cargo run --bin codegen2 > small.rs && mv small.rs src/ntt2 && cargo test ntt2::small
-```
-
 Inspect assembly using [cargo-show-asm]
 
 [cargo-show-asm]: https://crates.io/crates/cargo-show-asm

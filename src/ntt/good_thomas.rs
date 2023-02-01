@@ -1,5 +1,5 @@
 //! The Good-Thomas or Prime Factor FFT algorithm.
-//! 
+//!
 //! * <https://eng.libretexts.org/Bookshelves/Electrical_Engineering/Signal_Processing_and_Modeling/Fast_Fourier_Transforms_(Burrus)>
 //! * <https://www.youtube.com/watch?v=8cjDKirNIko>
 use super::Ntt;
@@ -176,6 +176,7 @@ pub mod bench {
     use criterion::Criterion;
 
     pub fn group(criterion: &mut Criterion) {
-        bench_ntt(criterion, "good_thomas", ntt, 15);
+        bench_ntt(criterion, "good_thomas", GoodThomas::new(3, 5));
+        bench_ntt(criterion, "good_thomas", GoodThomas::new(256, 257));
     }
 }
