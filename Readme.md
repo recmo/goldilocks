@@ -8,10 +8,8 @@ $$
 
 ## To do
 
-* [ ] Optimize transpose.
-* [ ] Optimize twiddles in Cooley-Tukey.
-* [ ] Good-Thomas inmplementation.
-* [ ] Winograd NTT?
+* [ ] Optimize large transpose.
+* [ ] Winograd NTT.
 
 ## Build run test bench
 

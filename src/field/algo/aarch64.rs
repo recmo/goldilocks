@@ -43,14 +43,16 @@ pub fn sub(a: u64, b: u64) -> u64 {
     r.wrapping_sub(c)
 }
 
-/// NEON implementation of [`mont_reduce_128`].
+/// Aarch64 vector implementation of [`mont_reduce_128`].
 #[inline(always)]
 #[must_use]
 pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
     unsafe {
         // let (a, e) = x0.overflowing_add(x0 << 32);
         let x0s = vshlq_n_u64(x0, 32);
-        let a = vaddq_u64(x0, x0s);
+        // Using an `asm!` here because the compiler is not able to generate the right opcodes.
+        // let a = vaddq_u64(x0, x0s);
+        let a = inst::add(x0, x0s);
         let e = vcltq_u64(a, x0s); // -1 iff overflow
 
         // let b = a.wrapping_sub(a >> 32).wrapping_sub(e as u64);
@@ -58,64 +60,134 @@ pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
         let b = vsubq_u64(a, a1);
         let b = vaddq_u64(b, e);
 
-        // sub(x1, b)
         // let (r, c) = x1.overflowing_sub(b);
         let r = vsubq_u64(x1, b);
         let c = vcgtq_u64(r, x1); // All ones iff overflow
 
         // let adj = 0u32.wrapping_sub(c as u32);
-        let adj = vshrq_n_u64(c, 32);
+        // Using an `asm!` here because the compiler is not able to generate the right opcodes.
+        // let adj = vshrq_n_u64(c, 32);
+        let adj = inst::shr32(c);
 
         // r.wrapping_sub(adj as u64)
         vsubq_u64(r, adj)
     }
 }
 
-/// Hand written assemble version of [`mont_reduce_128`].
+/// Hand written assembly version of [`mont_reduce_128`].
+/// 
+/// It is slower than the mixed-intrinsic one because it is more opaque to the compiler.
 #[inline(always)]
 #[must_use]
 pub fn mont_reduce_128_asm(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
-    unsafe {
+    // let (a, e) = x0.overflowing_add(x0 << 32);
+    let t = inst::shl32(x0);
+    let a = inst::add(x0, t);
+    let e = inst::gt(t, a);
+
+    // let b = a.wrapping_sub(a >> 32).wrapping_sub(e as u64);
+    let a1 = inst::shr32(a);
+    let b = inst::sub(a, a1);
+    let b = inst::add(b, e);
+
+    // let (r, c) = x1.overflowing_sub(b);
+    let r = inst::sub(x1, b);
+    let c = inst::gt(r, x1);
+
+    // let adj = 0u32.wrapping_sub(c as u32);
+    let adj = inst::shr32(c);
+
+    // r.wrapping_sub(adj as u64)
+    inst::sub(r, adj)
+}
+
+/// Hand written intrinsics. For some reason, the compiler is not able to
+/// generate the right opcodes for the built in intrinsics.
+/// 
+/// Small assembly blocks are preferred because they allow better register allocation.
+mod inst {
+    use core::arch::{aarch64::uint64x2_t, asm};
+
+    #[inline(always)]
+    pub fn shl32(a: uint64x2_t) -> uint64x2_t {
         let r: uint64x2_t;
-        asm!("
-            // let (x0, t) = x0.overflowing_add(x0 << 32);
-            shl   {t:v}.2d, {x0:v}.2d, #32
-            add  {x0:v}.2d, {x0:v}.2d,  {t:v}.2d
-            cmhi  {t:v}.2d,  {t:v}.2d, {x0:v}.2d  // t = -1 iff overflow
+        unsafe {
+            asm!("shl {r:v}.2d, {a:v}.2d, #32",
+                a = in(vreg) a,
+                r = lateout(vreg) r,
+                options(pure, nomem, nostack),
+            );
+        }
+        r
+    }
 
-            // let x0 = x0.wrapping_sub(x0 >> 32).wrapping_sub(t as u64);
-            ushr  {s:v}.2d, {x0:v}.2d, #32
-            sub  {x0:v}.2d, {x0:v}.2d, {s:v}.2d
-            add  {x0:v}.2d, {x0:v}.2d, {t:v}.2d
+    #[inline(always)]
+    pub fn shr32(a: uint64x2_t) -> uint64x2_t {
+        let r: uint64x2_t;
+        unsafe {
+            asm!("ushr {r:v}.2d, {a:v}.2d, #32",
+                a = in(vreg) a,
+                r = lateout(vreg) r,
+                options(pure, nomem, nostack),
+            );
+        }
+        r
+    }
 
-            // let (s, t) = x1.overflowing_sub(x0);
-            sub {s:v}.2d, {x1:v}.2d, {x0:v}.2d
-            cmhi {t:v}.2d, {s:v}.2d, {x1:v}.2d
+    #[inline(always)]
+    pub fn add(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+        let r: uint64x2_t;
+        unsafe {
+            asm!("add {r:v}.2d, {a:v}.2d, {b:v}.2d",
+                a = in(vreg) a,
+                b = in(vreg) b,
+                r = lateout(vreg) r,
+                options(pure, nomem, nostack),
+            );
+        }
+        r
+    }
 
-            // let adj = 0u32.wrapping_sub(c as u32);
-            // r.wrapping_sub(adj as u64)
-            ushr {t:v}.2d, {t:v}.2d, #32
-            sub  {s:v}.2d, {s:v}.2d, {t:v}.2d
-            ",
-            x0 = inout(vreg) x0 => _,
-            x1 = inout(vreg) x1 => _,
-            s = out(vreg) r,
-            t = out(vreg) _,
-            options(pure, nomem, nostack),
-        );
+    #[inline(always)]
+    pub fn sub(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+        let r: uint64x2_t;
+        unsafe {
+            asm!("sub {r:v}.2d, {a:v}.2d, {b:v}.2d",
+                a = in(vreg) a,
+                b = in(vreg) b,
+                r = lateout(vreg) r,
+                options(pure, nomem, nostack),
+            );
+        }
+        r
+    }
+
+    #[inline(always)]
+    pub fn gt(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+        let r: uint64x2_t;
+        unsafe {
+            asm!("cmhi {r:v}.2d, {a:v}.2d, {b:v}.2d",
+                a = in(vreg) a,
+                b = in(vreg) b,
+                r = lateout(vreg) r,
+                options(pure, nomem, nostack),
+            );
+        }
         r
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use super::super::{generic, MODULUS};
+    use super::{
+        super::{generic, MODULUS},
+        *,
+    };
     use proptest::{prop_assume, proptest};
 
     #[test]
     fn test_mont_reduce_128() {
-       proptest!(|(x0: [u64; 2], x1: [u64; 2])| {
+        proptest!(|(x0: [u64; 2], x1: [u64; 2])| {
             prop_assume!(x1[0] < MODULUS);
             prop_assume!(x1[1] < MODULUS);
             let expected = [
@@ -128,11 +200,11 @@ mod test {
             let value: [u64;2] = unsafe { std::mem::transmute(value) };
             assert_eq!(value, expected);
         });
-     }
+    }
 
     #[test]
     fn test_mont_reduce_128_asm() {
-       proptest!(|(x0: [u64; 2], x1: [u64; 2])| {
+        proptest!(|(x0: [u64; 2], x1: [u64; 2])| {
             prop_assume!(x1[0] < MODULUS);
             prop_assume!(x1[1] < MODULUS);
             let expected = [
@@ -145,7 +217,7 @@ mod test {
             let value: [u64;2] = unsafe { std::mem::transmute(value) };
             assert_eq!(value, expected);
         });
-     }
+    }
 }
 
 fn pair(a: u64, b: u64) -> uint64x2_t {
@@ -155,8 +227,7 @@ fn pair(a: u64, b: u64) -> uint64x2_t {
 #[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
-    use super::*;
-    use super::super::MODULUS;
+    use super::{super::MODULUS, *};
     use core::hint::black_box;
     use criterion::{measurement::WallTime, BenchmarkGroup, BenchmarkId, Criterion, Throughput};
     use rand::{thread_rng, Rng};
@@ -164,7 +235,7 @@ pub mod bench {
 
     pub fn group(criterion: &mut Criterion) {
         bench_binary(criterion, "redc", mont_reduce_128);
-        bench_binary(criterion, "redc2", mont_reduce_128_asm);
+        bench_binary(criterion, "redc/asm", mont_reduce_128_asm);
     }
 
     #[must_use]
@@ -181,7 +252,11 @@ pub mod bench {
     ///
     /// Does small batches of different sizes to test instruction level
     /// parallelism.
-    pub fn bench_binary(criterion: &mut Criterion, name: &str, f: impl Fn(uint64x2_t, uint64x2_t) -> uint64x2_t) {
+    pub fn bench_binary(
+        criterion: &mut Criterion,
+        name: &str,
+        f: impl Fn(uint64x2_t, uint64x2_t) -> uint64x2_t,
+    ) {
         let f = &f;
         let mut group = criterion.benchmark_group("field/aarch64");
         bench_binary_n::<1>(&mut group, name, f);

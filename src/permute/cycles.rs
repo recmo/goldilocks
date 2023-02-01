@@ -67,7 +67,10 @@ impl<I: Index> Cycles<I> {
 
     /// Compute the permutation from an index mapping function.
     pub fn from_fn(size: usize, permutation: impl Fn(usize) -> usize) -> Self {
-        assert!(size.saturating_sub(1) <= I::max(), "Invalid index type for size.");
+        assert!(
+            size.saturating_sub(1) <= I::max(),
+            "Invalid index type for size."
+        );
         let mut cycles = BTreeMap::<usize, Vec<I>>::new();
         let mut done = vec![false; size];
         let mut cycle = Vec::new();
