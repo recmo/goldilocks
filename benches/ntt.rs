@@ -11,7 +11,6 @@ enum Algorithm {
     Naive,
     Ntt,
     Inverse,
-    Small,
     Transpose,
     Winter,
 }
@@ -68,13 +67,6 @@ fn main() {
                 time(|| strat.ntt(input))
             }
             Algorithm::Inverse => time(|| ntt::intt(input)),
-            Algorithm::Small => {
-                if !ntt::small::ntt(input) {
-                    // Unsupported size
-                    continue;
-                }
-                time(|| ntt::small::ntt(input))
-            }
             Algorithm::Transpose => time(|| {
                 // Representative of the work in six-step NTT.
                 permute::transpose(input, (a, b));
