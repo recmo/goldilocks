@@ -228,6 +228,7 @@ pub mod bench {
         bench_binary(criterion, "sub", sub);
         bench_binary(criterion, "mul", mul);
         bench_binary(criterion, "mont_mul", mont_mul);
+        bench_binary(criterion, "redc", |x0, x1| generic::mont_reduce_128(((x1 as u128) << 64) | x0 as u128));
         bench_unary(criterion, "inv", inv);
         bench_unary(criterion, "shift/48", |a| shift(a, 48));
         bench_unary(criterion, "shift/32", |a| shift(a, 32));
