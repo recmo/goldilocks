@@ -25,9 +25,9 @@ pub fn from_fn<T: 'static + Copy + Send + Sync>(
     size: usize,
     permutation: impl Fn(usize) -> usize,
 ) -> Arc<dyn Permute<T>> {
-    if size <= u16::MAX as usize {
+    if size.saturating_sub(1) <= u16::MAX as usize {
         Arc::new(Cycles::<u16>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
-    } else if size <= u32::MAX as usize {
+    } else if size - 1 <= u32::MAX as usize {
         Arc::new(Cycles::<u32>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
     } else {
         Arc::new(Cycles::<usize>::from_fn(size, permutation)) as Arc<dyn Permute<T>>
@@ -67,7 +67,7 @@ impl<I: Index> Cycles<I> {
 
     /// Compute the permutation from an index mapping function.
     pub fn from_fn(size: usize, permutation: impl Fn(usize) -> usize) -> Self {
-        assert!((size - 1) <= I::max(), "Invalid index type for size.");
+        assert!(size.saturating_sub(1) <= I::max(), "Invalid index type for size.");
         let mut cycles = BTreeMap::<usize, Vec<I>>::new();
         let mut done = vec![false; size];
         let mut cycle = Vec::new();
