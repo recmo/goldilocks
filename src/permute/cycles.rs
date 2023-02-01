@@ -35,6 +35,31 @@ pub fn from_fn<T: 'static + Copy + Send + Sync>(
 }
 
 impl<I: Index> Cycles<I> {
+
+    /// Compute the permutation of a list of indices.
+    /// 
+    /// `list` must contain the numbers `0..list.len()`.
+    pub fn from_list(list: &[usize]) -> Self {
+        Self::from_fn(list.len(), |i| list.iter().position(|x| *x == i).unwrap())
+    }
+
+    /// Return the permutation in list form.
+    pub fn to_list(&self) -> Vec<usize> {
+        let mut result = (0..self.size).collect::<Vec<usize>>();
+        self.permute(&mut result);
+        result
+    }
+
+    /// Compute the permutation from an example.
+    /// 
+    /// `source` and `image` must be the same length, the elements in `source` must be
+    /// distinct, and the elements in `image` must be a permutation of the ones in `source`.
+    pub fn from_lists<T: Eq>(source: &[T], image: &[T]) -> Self {
+        assert_eq!(source.len(), image.len(), "Source and image must be the same length.");
+        Self::from_fn(source.len(), |i| image.iter().position(|x| x == &source[i]).unwrap())
+    }
+
+    /// Compute the permutation from an index mapping function.
     pub fn from_fn(size: usize, permutation: impl Fn(usize) -> usize) -> Self {
         assert!((size - 1) <= I::max(), "Invalid index type for size.");
         let mut cycles = BTreeMap::<usize, Vec<I>>::new();
@@ -50,8 +75,8 @@ impl<I: Index> Cycles<I> {
             // Follow the cycle.
             let mut j = i;
             loop {
-                assert!(j < size, "Not a permutation: out of bounds.");
-                assert!(!done[j], "Not a permutation: not bijective.");
+                assert!(j < size, "Not a permutation: index {j} out of bounds.");
+                assert!(!done[j], "Not a permutation: not bijective, {j} assigned twice.");
                 cycle.push(I::from(j));
                 done[j] = true;
                 j = permutation(j);
@@ -78,6 +103,7 @@ impl<I: Index> Cycles<I> {
         }
     }
 
+    /// Invert the permutation in place.
     pub fn invert(&mut self) {
         for (length, cycles) in self.cycles.iter_mut() {
             debug_assert!(*length >= 2);

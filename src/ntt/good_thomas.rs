@@ -1,4 +1,7 @@
 //! The Good-Thomas or Prime Factor FFT algorithm.
+//! 
+//! * <https://eng.libretexts.org/Bookshelves/Electrical_Engineering/Signal_Processing_and_Modeling/Fast_Fourier_Transforms_(Burrus)>
+//! * <https://www.youtube.com/watch?v=8cjDKirNIko>
 use super::Ntt;
 use crate::{
     permute::{self, cycles, Permute},
@@ -31,10 +34,16 @@ impl GoodThomas {
         let inner_n1 = super::strategy(n1);
         let inner_n2 = super::strategy(n2);
 
-        // Find parameters
+        // Find permutation parameters
         // See C.S. Burrus (2018) eq. (10.5).
         let (k1, k2) = (n2, n1);
-        let (k3, k4) = (modinv(n2, n1) * n2, modinv(n1, n2) * n1);
+        let (k3, k4) = (modinv(k1, n1) * n2, modinv(k2, n2) * n1);
+
+        // IDEA: At least for 3×5 this permutation can be a swap (k1=10, k2=6)!
+        // Swaps are efficient to do in place. Can we always find a valid solution
+        // that is a swap?
+        // Can we find and alternative permutation for the transpose that is a swap?
+        // Does this generalize to Cooley-Tukey?
 
         // Necessary and sufficient conditions for the choice of parameters to work.
         // See C.S. Burrus (2018) eq. (10.1) and (10.2).
@@ -55,23 +64,25 @@ impl GoodThomas {
 
         // Create permutations
         // TODO: For large splits (say 8192×65537) Cycles takes a lot of memory.
-        let permute_i = cycles::from_fn(n, |i| {
+        let mut permute_i = cycles::Cycles::<u32>::from_fn(n, |i| {
             let (i1, i2) = (i / n2, i % n2);
             (i1 * k1 + i2 * k2) % n
         });
-        let transpose = permute::transpose_strategy((n2, n1));
-        let permute_k = cycles::from_fn(n, |i| {
+        let transpose = permute::transpose_strategy((n1, n2));
+        let mut permute_k = cycles::Cycles::<u32>::from_fn(n, |i| {
             let (i1, i2) = (i % n1, i / n1);
             (i1 * k3 + i2 * k4) % n
         });
+
+        permute_i.invert();
 
         Self {
             split: (n1, n2),
             inner_n1,
             inner_n2,
-            permute_i,
+            permute_i: Arc::new(permute_i),
             transpose,
-            permute_k,
+            permute_k: Arc::new(permute_k),
             parallel: n >= 1 << 15,
         }
     }
@@ -93,7 +104,7 @@ impl Ntt for GoodThomas {
         // Input permutation.
         self.permute_i.permute(values);
 
-        // First inner NTT.
+        // First inner NTT: n1 parallel n2 sized NTT.
         if !self.parallel {
             values
                 .chunks_exact_mut(n2)
@@ -140,6 +151,16 @@ mod tests {
     #[test]
     fn test_3x5() {
         test_ntt(GoodThomas::new(3, 5));
+    }
+
+    #[test]
+    fn test_5x2() {
+        test_ntt(GoodThomas::new(5, 3));
+    }
+
+    #[test]
+    fn test_15x16() {
+        test_ntt(GoodThomas::new(15, 16));
     }
 
     #[test]
