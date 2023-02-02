@@ -236,6 +236,7 @@ pub mod bench {
         bench_unary(criterion, "shift/32", |a| shift(a, 32));
         bench_unary(criterion, "shift/64", |a| shift(a, 64));
 
+        #[cfg(target_arch = "aarch64")]
         aarch64::bench::group(criterion);
     }
 
