@@ -1,7 +1,8 @@
 #![cfg(target_arch = "aarch64")]
 // OPT: Use a super optimizer to find optimal sequences for add, mul, neg, sub,
 // and shift.
-use std::arch::{aarch64::*, asm};
+use std::arch::{aarch64::*};
+use super::MODULUS;
 
 #[inline(always)]
 #[must_use]
@@ -41,6 +42,42 @@ pub fn sub(a: u64, b: u64) -> u64 {
         )
     }
     r.wrapping_sub(c)
+}
+
+/// Aarch64 vector non-normalizing add.
+#[inline(always)]
+#[must_use]
+pub fn vadd_denormalizing(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+    unsafe {
+        let r = vaddq_u64(a, b);
+        // let c = vcltq_u64(r, a);
+        let c = inst::gt(a, r);
+        vsraq_n_u64(r, c, 32)
+    }
+}
+
+/// Aarch64 vector implementation of [`add`].
+#[inline(always)]
+#[must_use]
+pub fn vadd(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+    unsafe {
+        let modulus = vdupq_n_u64(MODULUS);
+        let b = vsubq_u64(modulus, b);
+        vsub(a, b)
+    }
+}
+
+/// Aarch64 vector implementation of [`sub`].
+#[inline(always)]
+#[must_use]
+pub fn vsub(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
+    unsafe {
+        let r = vsubq_u64(a, b);
+        let c = vcgtq_u64(r, a);
+        // let c = inst::gt(r, a);
+        let c = vshrq_n_u64(c, 32);
+        vsubq_u64(r, c)
+    }
 }
 
 /// Aarch64 vector implementation of [`mont_reduce_128`].
@@ -177,6 +214,10 @@ mod inst {
     }
 }
 
+fn pair(a: u64, b: u64) -> uint64x2_t {
+    unsafe { std::mem::transmute([a, b]) }
+}
+
 #[cfg(test)]
 mod test {
     use super::{
@@ -184,6 +225,44 @@ mod test {
         *,
     };
     use proptest::{prop_assume, proptest};
+
+    #[test]
+    fn test_vadd() {
+        proptest!(|(a: [u64; 2], b: [u64; 2])| {
+            prop_assume!(a[0] < MODULUS);
+            prop_assume!(a[1] < MODULUS);
+            prop_assume!(b[0] < MODULUS);
+            prop_assume!(b[1] < MODULUS);
+            let expected = [
+                generic::add(a[0], b[0]),
+                generic::add(a[1], b[1]),
+            ];
+            let a = unsafe { std::mem::transmute(a) };
+            let b = unsafe { std::mem::transmute(b) };
+            let value = vadd(a, b);
+            let value: [u64;2] = unsafe { std::mem::transmute(value) };
+            assert_eq!(value, expected);
+        });
+    }
+
+    #[test]
+    fn test_vsub() {
+        proptest!(|(a: [u64; 2], b: [u64; 2])| {
+            prop_assume!(a[0] < MODULUS);
+            prop_assume!(a[1] < MODULUS);
+            prop_assume!(b[0] < MODULUS);
+            prop_assume!(b[1] < MODULUS);
+            let expected = [
+                generic::sub(a[0], b[0]),
+                generic::sub(a[1], b[1]),
+            ];
+            let a = unsafe { std::mem::transmute(a) };
+            let b = unsafe { std::mem::transmute(b) };
+            let value = vsub(a, b);
+            let value: [u64;2] = unsafe { std::mem::transmute(value) };
+            assert_eq!(value, expected);
+        });
+    }
 
     #[test]
     fn test_mont_reduce_128() {
@@ -220,10 +299,6 @@ mod test {
     }
 }
 
-fn pair(a: u64, b: u64) -> uint64x2_t {
-    unsafe { std::mem::transmute([a, b]) }
-}
-
 #[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
@@ -234,6 +309,8 @@ pub mod bench {
     use std::time::Instant;
 
     pub fn group(criterion: &mut Criterion) {
+        bench_binary(criterion, "add", vadd);
+        bench_binary(criterion, "sub", vsub);
         bench_binary(criterion, "redc", mont_reduce_128);
         bench_binary(criterion, "redc/asm", mont_reduce_128_asm);
     }
