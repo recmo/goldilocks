@@ -33,12 +33,13 @@ pub fn transpose_strategy<T: 'static + Copy + Send + Sync>(
 
     if rows == cols {
         Arc::new(SquareTranspose::new(rows)) as Arc<dyn Permute<T>>
+    } else if gcd >= 16 {
+        Arc::new(gcd::Gcd::new(rows, cols)) as Arc<dyn Permute<T>>
     } else if size <= 1 << 20 {
         let permute = permutation::transpose(rows, cols);
         cycles::from_fn(size, permute)
     } else {
-        Arc::new(gcd::Gcd::new(rows, cols)) as Arc<dyn Permute<T>>
-        // Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
+        Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
     }
 }
 
