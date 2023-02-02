@@ -1,8 +1,8 @@
 #![cfg(target_arch = "aarch64")]
 // OPT: Use a super optimizer to find optimal sequences for add, mul, neg, sub,
 // and shift.
-use std::arch::{aarch64::*};
 use super::MODULUS;
+use std::arch::aarch64::*;
 
 #[inline(always)]
 #[must_use]
@@ -87,8 +87,8 @@ pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
     unsafe {
         // let (a, e) = x0.overflowing_add(x0 << 32);
         let x0s = vshlq_n_u64(x0, 32);
-        // Using an `asm!` here because the compiler is not able to generate the right opcodes.
-        // let a = vaddq_u64(x0, x0s);
+        // Using an `asm!` here because the compiler is not able to generate the right
+        // opcodes. let a = vaddq_u64(x0, x0s);
         let a = inst::add(x0, x0s);
         let e = vcltq_u64(a, x0s); // -1 iff overflow
 
@@ -102,8 +102,8 @@ pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
         let c = vcgtq_u64(r, x1); // All ones iff overflow
 
         // let adj = 0u32.wrapping_sub(c as u32);
-        // Using an `asm!` here because the compiler is not able to generate the right opcodes.
-        // let adj = vshrq_n_u64(c, 32);
+        // Using an `asm!` here because the compiler is not able to generate the right
+        // opcodes. let adj = vshrq_n_u64(c, 32);
         let adj = inst::shr32(c);
 
         // r.wrapping_sub(adj as u64)
@@ -112,8 +112,9 @@ pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
 }
 
 /// Hand written assembly version of [`mont_reduce_128`].
-/// 
-/// It is slower than the mixed-intrinsic one because it is more opaque to the compiler.
+///
+/// It is slower than the mixed-intrinsic one because it is more opaque to the
+/// compiler.
 #[inline(always)]
 #[must_use]
 pub fn mont_reduce_128_asm(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
@@ -140,8 +141,9 @@ pub fn mont_reduce_128_asm(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
 
 /// Hand written intrinsics. For some reason, the compiler is not able to
 /// generate the right opcodes for the built in intrinsics.
-/// 
-/// Small assembly blocks are preferred because they allow better register allocation.
+///
+/// Small assembly blocks are preferred because they allow better register
+/// allocation.
 mod inst {
     use core::arch::{aarch64::uint64x2_t, asm};
 

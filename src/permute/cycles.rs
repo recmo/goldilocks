@@ -3,6 +3,7 @@ use rayon::prelude::*;
 use std::{
     collections::BTreeMap,
     fmt,
+    ptr::copy_nonoverlapping,
     sync::{
         atomic::{AtomicPtr, Ordering},
         Arc,
@@ -39,7 +40,9 @@ impl<I: Index> Cycles<I> {
     ///
     /// `list` must contain the numbers `0..list.len()`.
     pub fn from_list(list: &[usize]) -> Self {
-        Self::from_fn(list.len(), |i| list.iter().position(|x| *x == i).unwrap())
+        let mut r = Self::from_fn(list.len(), |i| list[i]);
+        r.invert();
+        r
     }
 
     /// Return the permutation in list form.
@@ -54,14 +57,15 @@ impl<I: Index> Cycles<I> {
     /// `source` and `image` must be the same length, the elements in `source`
     /// must be distinct, and the elements in `image` must be a permutation
     /// of the ones in `source`.
-    pub fn from_lists<T: Eq>(source: &[T], image: &[T]) -> Self {
+    pub fn from_example<T: Eq>(source: &[T], image: &[T]) -> Self {
         assert_eq!(
             source.len(),
             image.len(),
             "Source and image must be the same length."
         );
         Self::from_fn(source.len(), |i| {
-            image.iter().position(|x| x == &source[i]).unwrap()
+            let source = &source[i];
+            image.iter().position(|x| x == source).unwrap()
         })
     }
 
@@ -183,6 +187,55 @@ impl<I: Index> Cycles<I> {
             });
         });
     }
+
+    pub fn apply_chunks<T: Copy + Send + Sync>(&self, values: &mut [T], chunk: usize) {
+        assert_eq!(values.len(), self.size * chunk);
+        let mut buffer = vec![values[0]; chunk];
+        for (length, cycles) in self.cycles.iter() {
+            debug_assert!(*length >= 2);
+            debug_assert_eq!(cycles.len() % *length, 0);
+            for cycle in cycles.chunks_exact(*length) {
+                let mut dst = cycle[0].to() * chunk;
+                buffer.copy_from_slice(&values[dst..dst + chunk]);
+                for src in cycle.iter().skip(1).map(|i| i.to() * chunk) {
+                    values.copy_within(src..src + chunk, dst);
+                    dst = src;
+                }
+                values[dst..dst + chunk].copy_from_slice(&buffer);
+            }
+        }
+    }
+
+    pub fn par_apply_chunks<T: Copy + Send + Sync>(&self, values: &mut [T], chunk: usize) {
+        assert_eq!(values.len(), self.size * chunk);
+
+        let empty = values[0];
+
+        // SAFETY: All cycles are disjoint, so we can safely move the values in
+        // parallel. For this we need to use a pointer we can share between threads.
+        let values = AtomicPtr::new(values.as_mut_ptr());
+
+        self.cycles.par_iter().for_each(|(length, cycles)| {
+            debug_assert!(*length >= 2);
+            debug_assert_eq!(cycles.len() % *length, 0);
+            cycles.par_chunks_exact(*length).for_each_init(
+                || vec![empty; chunk],
+                |buffer, cycle| {
+                    let values = values.load(Ordering::Relaxed);
+                    unsafe {
+                        let mut iter = cycle.iter().map(|i| values.add(i.to() * chunk));
+                        let mut dst = iter.next().unwrap_unchecked();
+                        copy_nonoverlapping(dst, buffer.as_mut_ptr(), chunk);
+                        for src in iter {
+                            copy_nonoverlapping(src, dst, chunk);
+                            dst = src;
+                        }
+                        copy_nonoverlapping(buffer.as_mut_ptr(), dst, chunk);
+                    }
+                },
+            );
+        });
+    }
 }
 
 impl<I: Index, T: 'static + Copy + Send + Sync> Permute<T> for Cycles<I> {
@@ -257,9 +310,16 @@ impl Index for usize {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::permute;
 
-    use super::*;
+    #[test]
+    fn test_transpose_list() {
+        let list = [4, 2, 3, 1, 0];
+        let p = Cycles::<u16>::from_list(&list);
+        let t = p.to_list();
+        assert_eq!(t, list);
+    }
 
     fn test_transpose(a: usize, b: usize) {
         let size = a * b;

@@ -1,7 +1,6 @@
-// mod inner_block;
 mod copy;
-// mod cyclic;
 pub mod cycles;
+pub mod gcd;
 pub mod gw18;
 pub mod permutation;
 mod square;
@@ -30,6 +29,7 @@ pub fn transpose_strategy<T: 'static + Copy + Send + Sync>(
     (rows, cols): (usize, usize),
 ) -> Arc<dyn Permute<T> + 'static> {
     let size = rows * cols;
+    let gcd = crate::utils::gcd(rows, cols);
 
     if rows == cols {
         Arc::new(SquareTranspose::new(rows)) as Arc<dyn Permute<T>>
@@ -37,7 +37,8 @@ pub fn transpose_strategy<T: 'static + Copy + Send + Sync>(
         let permute = permutation::transpose(rows, cols);
         cycles::from_fn(size, permute)
     } else {
-        Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
+        Arc::new(gcd::Gcd::new(rows, cols)) as Arc<dyn Permute<T>>
+        // Arc::new(gw18::Gw18::new((rows, cols))) as Arc<dyn Permute<T>>
     }
 }
 

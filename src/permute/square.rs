@@ -37,7 +37,7 @@ pub fn transpose<T: Copy>(values: &mut [T], size: usize) {
     }
 }
 
-unsafe fn transpose_square<T: Copy>(values: *mut T, stride: usize, size: usize) {
+pub(super) unsafe fn transpose_square<T: Copy>(values: *mut T, stride: usize, size: usize) {
     // eprintln!("square::transpose({size})");
     const REC_THRESHOLD: usize = 1 << 4;
     const PAR_THRESHOLD: usize = 1 << 10;
@@ -92,7 +92,7 @@ unsafe fn transpose_square<T: Copy>(values: *mut T, stride: usize, size: usize) 
     }
 }
 
-unsafe fn transpose_swap<T: Copy>(
+pub(super) unsafe fn transpose_swap<T: Copy>(
     a: *mut T,
     b: *mut T,
     stride: usize,
