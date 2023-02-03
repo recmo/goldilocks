@@ -5,6 +5,7 @@ use goldilocks_ntt::{
     ntt, permute,
     utils::gcd,
 };
+use std::io::{stdout, Write};
 
 #[derive(Clone, Debug, ValueEnum)]
 enum Algorithm {
@@ -51,7 +52,7 @@ fn main() {
     for size in divisors()
         .iter()
         .map(|&n| n as usize)
-        .filter(|&n| n > 1 && n <= max_size && (cli.all || is_smooth(n)))
+        .filter(|&n| n > 2 && n <= max_size && (cli.all || is_smooth(n)))
     {
         let input = &mut input[..size];
 
@@ -59,11 +60,30 @@ fn main() {
         let a = split(size);
         let b = size / a;
 
+        // Filter
+        if !match cli.algo {
+            Algorithm::Winter => input.len().is_power_of_two(),
+            _ => true,
+        } {
+            continue;
+        }
+
         // Benchmark
+        print!("{size}");
+        stdout().flush();
+        match cli.algo {
+            Algorithm::Ntt | Algorithm::Winter => {}
+            _ => {
+                print!(",");
+                stdout().flush();
+            }
+        }
         let duration = match cli.algo {
             Algorithm::Naive => time(|| ntt::naive::ntt(input)),
             Algorithm::Ntt => {
                 let strat = ntt::strategy(size);
+                print!(",");
+                stdout().flush();
                 time(|| strat.ntt(input))
             }
             Algorithm::Inverse => time(|| ntt::intt(input)),
@@ -74,19 +94,19 @@ fn main() {
                 permute::transpose(input, (a, b));
             }),
             Algorithm::Winter => {
-                if !input.len().is_power_of_two() {
-                    // Unsupported size
-                    continue;
-                }
                 let twiddles = winter_math::fft::get_twiddles(input.len());
                 let mut input = input
                     .iter()
                     .map(|n| winter_math::fields::f64::BaseElement::new((*n).into()))
                     .collect::<Vec<_>>();
+                print!(",");
+                stdout().flush();
                 time(|| winter_math::fft::evaluate_poly(input.as_mut_slice(), &twiddles))
             }
         };
         let throughput = (size as f64) / duration;
-        println!("{size},{duration},{throughput}");
+        println!("{duration},{throughput}");
+
+        goldilocks_ntt::ntt::clear_cache();
     }
 }
