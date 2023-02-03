@@ -2,23 +2,24 @@
 //!
 //! * <https://eng.libretexts.org/Bookshelves/Electrical_Engineering/Signal_Processing_and_Modeling/Fast_Fourier_Transforms_(Burrus)>
 //! * <https://www.youtube.com/watch?v=8cjDKirNIko>
-use super::Ntt;
+use super::{Ntt, MIN_WORK_SIZE};
 use crate::{
     permute::{self, cycles, Permute},
-    utils::{gcd, modinv},
+    utils::{div_round_up, gcd, modinv},
     Field,
 };
 use rayon::prelude::*;
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 pub struct GoodThomas {
-    split:     (usize, usize),
-    inner_n1:  Arc<dyn Ntt>,
-    inner_n2:  Arc<dyn Ntt>,
-    permute_i: Arc<dyn Permute<Field>>,
-    transpose: Arc<dyn Permute<Field>>,
-    permute_k: Arc<dyn Permute<Field>>,
-    parallel:  bool,
+    split:        (usize, usize),
+    inner_n1:     Arc<dyn Ntt>,
+    inner_n2:     Arc<dyn Ntt>,
+    permute_i:    Arc<dyn Permute<Field>>,
+    transpose:    Arc<dyn Permute<Field>>,
+    permute_k:    Arc<dyn Permute<Field>>,
+    n1_work_size: usize,
+    n2_work_size: usize,
 }
 
 impl GoodThomas {
@@ -73,8 +74,13 @@ impl GoodThomas {
             let (i1, i2) = (i % n1, i / n1);
             (i1 * k3 + i2 * k4) % n
         });
-
         permute_i.invert();
+
+        // Compute (parallel) work sizes
+        // If these are larger than `n` `rayon` will not parallelize and run
+        // on the current thread, which is what we want.
+        let n1_work_size = cmp::max(n, div_round_up(MIN_WORK_SIZE, n1) * n1);
+        let n2_work_size = cmp::max(n, div_round_up(MIN_WORK_SIZE, n2) * n2);
 
         Self {
             split: (n1, n2),
@@ -83,7 +89,8 @@ impl GoodThomas {
             permute_i: Arc::new(permute_i),
             transpose,
             permute_k: Arc::new(permute_k),
-            parallel: n >= 1 << 15,
+            n1_work_size,
+            n2_work_size,
         }
     }
 }
@@ -94,43 +101,27 @@ impl Ntt for GoodThomas {
     }
 
     fn ntt(&self, values: &mut [Field]) {
-        assert_eq!(
-            values.len(),
-            self.len(),
-            "Input length must match NTT length"
-        );
-        let (n1, n2) = self.split;
+        debug_assert_eq!(values.len() % self.len(), 0);
+        for values in values.chunks_exact_mut(self.len()) {
+            // Input permutation.
+            self.permute_i.permute(values);
 
-        // Input permutation.
-        self.permute_i.permute(values);
-
-        // First inner NTT: n1 parallel n2 sized NTT.
-        if !self.parallel {
+            // First inner NTT: n1 parallel n2 sized NTT.
             values
-                .chunks_exact_mut(n2)
+                .par_chunks_mut(self.n2_work_size)
                 .for_each(|values| self.inner_n2.ntt(values));
-        } else {
-            values
-                .par_chunks_exact_mut(n2)
-                .for_each(|values| self.inner_n2.ntt(values));
-        }
 
-        // Transpose.
-        self.transpose.permute(values);
+            // Transpose.
+            self.transpose.permute(values);
 
-        // Second inner NTT.
-        if !self.parallel {
+            // Second inner NTT.
             values
-                .chunks_exact_mut(n1)
+                .par_chunks_mut(self.n1_work_size)
                 .for_each(|values| self.inner_n1.ntt(values));
-        } else {
-            values
-                .par_chunks_exact_mut(n1)
-                .for_each(|values| self.inner_n1.ntt(values));
-        }
 
-        // Output permutation.
-        self.permute_k.permute(values);
+            // Output permutation.
+            self.permute_k.permute(values);
+        }
     }
 }
 

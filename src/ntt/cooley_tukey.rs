@@ -1,10 +1,11 @@
-use super::Ntt;
+use super::{Ntt, MIN_WORK_SIZE};
 use crate::{
     permute::{self, Permute},
+    utils::div_round_up,
     Field,
 };
 use rayon::prelude::*;
-use std::sync::Arc;
+use std::{cmp, sync::Arc};
 
 pub struct CooleyTukey {
     size:         usize,
@@ -15,7 +16,8 @@ pub struct CooleyTukey {
     transpose_ba: Arc<dyn Permute<Field>>,
     root:         Field,
     twiddles:     Vec<Field>,
-    parallel:     bool,
+    a_work_size:  usize,
+    b_work_size:  usize,
 }
 
 impl CooleyTukey {
@@ -47,6 +49,12 @@ impl CooleyTukey {
             Vec::new()
         };
 
+        // Compute (parallel) work sizes
+        // If these are larger than `n` `rayon` will not parallelize and run
+        // on the current thread, which is what we want.
+        let a_work_size = cmp::max(size, div_round_up(MIN_WORK_SIZE, a) * a);
+        let b_work_size = cmp::max(size, div_round_up(MIN_WORK_SIZE, b) * b);
+
         Self {
             size,
             split: (a, b),
@@ -56,7 +64,8 @@ impl CooleyTukey {
             transpose_ba,
             root,
             twiddles,
-            parallel: size >= 1 << 15,
+            a_work_size,
+            b_work_size,
         }
     }
 }
@@ -67,87 +76,73 @@ impl Ntt for CooleyTukey {
     }
 
     fn ntt(&self, values: &mut [Field]) {
-        let (a, b) = self.split;
+        debug_assert_eq!(values.len() % self.size, 0);
+        for values in values.chunks_exact_mut(self.size) {
+            let (a, _) = self.split;
 
-        // Interpret `values` as an (a, b) matrix and convert to a (b, a) matrix
-        self.transpose_ab.permute(values);
+            // Interpret `values` as an (a, b) matrix and convert to a (b, a) matrix
+            self.transpose_ab.permute(values);
 
-        // Run `b` NTTs of size `a` and apply twiddles
-        if !self.twiddles.is_empty() {
-            let operation = |(i, (row, twiddles)): (usize, (&mut [Field], &[Field]))| {
-                self.inner_a.ntt(row);
-
-                // Apply twiddles
-                if i > 0 {
-                    for (value, &twiddle) in row.iter_mut().zip(twiddles).skip(1) {
-                        *value *= twiddle;
-                    }
-                }
-            };
-            if !self.parallel {
+            // Run `b` NTTs of size `a` and apply twiddles
+            if !self.twiddles.is_empty() {
                 values
-                    .chunks_exact_mut(a)
-                    .zip(self.twiddles.chunks_exact(a))
+                    .par_chunks_mut(self.a_work_size)
+                    .zip(self.twiddles.par_chunks(self.a_work_size))
                     .enumerate()
-                    .for_each(operation);
+                    .for_each(
+                        |(i, (mut block, mut twiddles)): (usize, (&mut [Field], &[Field]))| {
+                            self.inner_a.ntt(block);
+
+                            // Apply twiddles to the block
+                            if i == 0 {
+                                // Skip first row
+                                block = &mut block[a..];
+                                twiddles = &twiddles[a..];
+                            }
+                            for (row, twiddles) in
+                                block.chunks_exact_mut(a).zip(twiddles.chunks_exact(a))
+                            {
+                                for (value, &twiddle) in row.iter_mut().zip(twiddles).skip(1) {
+                                    *value *= twiddle;
+                                }
+                            }
+                        },
+                    );
             } else {
                 values
-                    .par_chunks_exact_mut(a)
-                    .zip(self.twiddles.par_chunks_exact(a))
+                    .par_chunks_mut(self.a_work_size)
                     .enumerate()
-                    .for_each(operation);
-            }
-        } else {
-            if !self.parallel {
-                let mut omega_col = self.root;
-                values.chunks_exact_mut(a).enumerate().for_each(|(i, row)| {
-                    self.inner_a.ntt(row);
-
-                    // Compute and apply twiddles.
-                    if i > 0 {
-                        let mut omega_row = omega_col;
-                        for value in row.iter_mut().skip(1) {
-                            *value *= omega_row;
-                            omega_row *= omega_col;
-                        }
-                        omega_col *= self.root;
-                    }
-                });
-            } else {
-                values.par_chunks_exact_mut(a).enumerate().for_each_with(
-                    None,
-                    |omega_col: &mut Option<Field>, (row, values)| {
-                        self.inner_a.ntt(values);
+                    .for_each(|(mut i, mut block)| {
+                        self.inner_a.ntt(block);
 
                         // Compute and apply twiddles.
-                        if row > 0 {
-                            let omega_col =
-                                omega_col.get_or_insert_with(|| self.root.pow(row as u64));
-                            let mut omega_row = *omega_col;
-                            for value in values.iter_mut().skip(1) {
-                                *value *= omega_row;
-                                omega_row *= *omega_col;
-                            }
-                            *omega_col *= self.root;
+                        if i == 0 {
+                            // Skip first row
+                            block = &mut block[a..];
+                            i += 1;
                         }
-                    },
-                );
+                        let first_row = i * self.a_work_size / a;
+                        let mut omega_col = self.root.pow(first_row as u64);
+                        for row in block.chunks_exact_mut(a) {
+                            let mut omega_row = omega_col;
+                            for value in row[1..a - 1].iter_mut() {
+                                *value *= omega_row;
+                                omega_row *= omega_col;
+                            }
+                            row[a - 1] *= omega_row;
+                            omega_col *= self.root;
+                        }
+                    });
             }
-        }
 
-        self.transpose_ba.permute(values);
+            self.transpose_ba.permute(values);
 
-        if !self.parallel {
-            values.chunks_exact_mut(b).for_each(|row| {
-                self.inner_b.ntt(row);
-            });
-        } else {
             values
-                .par_chunks_mut(b)
-                .for_each(|row| self.inner_b.ntt(row));
-        }
+                .par_chunks_mut(self.b_work_size)
+                .for_each(|block| self.inner_b.ntt(block));
 
-        self.transpose_ab.permute(values);
+            self.transpose_ab.permute(values);
+        }
     }
 }
 

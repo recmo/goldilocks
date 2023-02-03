@@ -56,14 +56,14 @@ fn ntt(vars: &mut [&str]) {
 
 pub fn naive_2(vars: &mut [&str]) {
     let [a, b] = vars else { panic!() };
-    println!("    let ({a}, {b}) = ({a} + {b}, {a} - {b});");
+    println!("        let ({a}, {b}) = ({a} + {b}, {a} - {b});");
 }
 
 pub fn naive_3(vars: &mut [&str]) {
     let [a, b, c] = vars else { panic!() };
-    println!("    let ({a}, {b}, {c}) = ({a} + {b} + {c},");
-    println!("        {a} + ({b} << 64) - ({c} << 32),");
-    println!("        {a} - ({b} << 32) + ({c} << 64));");
+    println!("        let ({a}, {b}, {c}) = ({a} + {b} + {c},");
+    println!("            {a} + ({b} << 64) - ({c} << 32),");
+    println!("            {a} - ({b} << 32) + ({c} << 64));");
 }
 
 fn rader(vars: &mut [&str]) {
@@ -93,8 +93,8 @@ fn rader(vars: &mut [&str]) {
 
     // Add `values[1..].sum()` to `value[0]`. `buffer[0]` conveniently contains
     // this sum after the NTT.
-    println!("    let t = {};", vars[0]);
-    println!("    let {} = {} + {};", vars[0], vars[0], buffer[0]);
+    println!("        let t = {};", vars[0]);
+    println!("        let {} = {} + {};", vars[0], vars[0], buffer[0]);
 
     // Apply twiddles
     let twiddles = {
@@ -111,11 +111,11 @@ fn rader(vars: &mut [&str]) {
 
     for (i, t) in twiddles.iter().enumerate() {
         let v = buffer[i];
-        println!("    let {v} = {v} * Field::new({t});");
+        println!("        let {v} = {v} * Field::new({t});");
     }
 
     // Add x0 to all `values[1..]` terms by adding to the constant term before INTT.
-    println!("    let {} = {} + t;", buffer[0], buffer[0]);
+    println!("        let {} = {} + t;", buffer[0], buffer[0]);
 
     // Transform back
     buffer[1..].reverse();
@@ -144,10 +144,10 @@ fn cooley_tukey(vars: &mut [&str], (a, b): (usize, usize)) {
             let (exp, order) = (exp / g, order / g);
             if 384 % order == 0 {
                 let exp = exp * 384 / order;
-                println!("    let {var} = {};", mul_root_384(var, exp));
+                println!("        let {var} = {};", mul_root_384(var, exp));
             } else {
                 let omega: u64 = Field::root(order as u64).unwrap().pow(exp as u64).into();
-                println!("    let {var} = {var} * Field::new({omega});")
+                println!("        let {var} = {var} * Field::new({omega});")
             }
         }
     }
@@ -199,7 +199,8 @@ pub fn generate(size: usize) {
 /// 
 /// Panics if `values.len() != {size}`.
 pub fn ntt_{size}(values: &mut [Field]) {{
-    assert_eq!(values.len(), {size});"#
+    debug_assert_eq!(values.len() % {size}, 0);
+    for values in values.chunks_exact_mut({size}) {{"#
     );
 
     let var_strings = (0..size).map(|i| format!("a{i}")).collect::<Vec<_>>();
@@ -207,16 +208,16 @@ pub fn ntt_{size}(values: &mut [Field]) {{
 
     // Generate reads
     for (i, a) in vars.iter().enumerate() {
-        println!("    let {a} = values[{i}];");
+        println!("        let {a} = values[{i}];");
     }
 
     ntt(&mut vars);
 
     // Generate writes
     for (i, a) in vars.iter().enumerate() {
-        println!("    values[{i}] = {a};");
+        println!("        values[{i}] = {a};");
     }
-    println!("}}\n");
+    println!("    }}\n}}\n");
 }
 
 fn main() {

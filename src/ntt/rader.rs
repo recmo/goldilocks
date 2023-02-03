@@ -1,9 +1,10 @@
-use super::Ntt;
+use super::{Ntt, MIN_WORK_SIZE};
 use crate::{
     permute::{cycles, Permute},
     utils::modexp,
     Field,
 };
+use rayon::prelude::*;
 use std::sync::Arc;
 
 pub struct Rader {
@@ -62,30 +63,33 @@ impl Ntt for Rader {
     }
 
     fn ntt(&self, values: &mut [Field]) {
-        assert_eq!(values.len(), self.size);
-        let (first, convolve) = values.split_first_mut().unwrap();
+        debug_assert_eq!(values.len() % self.size, 0);
+        for values in values.chunks_exact_mut(self.size) {
+            let (first, convolve) = values.split_first_mut().unwrap();
 
-        // Input permutation.
-        self.permute_k.permute(convolve);
+            // Input permutation.
+            self.permute_k.permute(convolve);
 
-        // Inner NTT
-        self.inner.ntt(convolve);
+            // Inner NTT
+            self.inner.ntt(convolve);
 
-        // Apply constants, twiddles and scale factor.
-        let x0 = *first;
-        *first += convolve[0];
-        convolve
-            .iter_mut()
-            .zip(self.twiddles.iter())
-            .for_each(|(b, &t)| *b *= t);
-        convolve[0] += x0;
+            // Apply constants, twiddles and scale factor.
+            let x0 = *first;
+            *first += convolve[0];
+            convolve
+                .par_iter_mut()
+                .with_min_len(MIN_WORK_SIZE)
+                .zip(self.twiddles.par_iter())
+                .for_each(|(b, &t)| *b *= t);
+            convolve[0] += x0;
 
-        // Transform back (scale factor already applied)
-        convolve[1..].reverse();
-        self.inner.ntt(convolve);
+            // Transform back (scale factor already applied)
+            convolve[1..].reverse();
+            self.inner.ntt(convolve);
 
-        // Output permutation
-        self.permute_i.permute(convolve);
+            // Output permutation
+            self.permute_i.permute(convolve);
+        }
     }
 }
 

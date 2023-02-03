@@ -15,6 +15,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+// Minimum work size (in elements) for parallelization.
+const MIN_WORK_SIZE: usize = 1 << 14;
+
 static CACHE: Mutex<BTreeMap<usize, Arc<dyn Ntt>>> = Mutex::new(BTreeMap::new());
 
 pub trait Ntt: Sync + Send {
@@ -81,7 +84,6 @@ impl<F: Fn(&mut [Field]) + Send + Sync> Ntt for NttFn<F> {
     }
 
     fn ntt(&self, values: &mut [Field]) {
-        debug_assert_eq!(values.len(), self.0);
         (self.1)(values);
     }
 }

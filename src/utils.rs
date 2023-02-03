@@ -27,6 +27,11 @@ pub fn assume(p: bool) {
 }
 
 #[must_use]
+pub fn div_round_up(a: usize, b: usize) -> usize {
+    (a + b - 1) / b
+}
+
+#[must_use]
 pub fn modexp(mut a: usize, mut e: usize, m: usize) -> usize {
     assert!(m > 0);
     assert!(m < 1 << (usize::BITS / 2), "modulus is too large");
