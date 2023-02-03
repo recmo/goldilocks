@@ -60,9 +60,10 @@ pub mod bench {
     }
 
     pub fn time<O>(mut f: impl FnMut() -> O) -> f64 {
-        let mut duration = 0.0;
+        let mut total_duration = 0.0;
         let mut count = 0;
-        while duration < 5.0 {
+        let mut measurements = Vec::new();
+        while total_duration < 1.0 {
             // Do a single run first
             let start = Instant::now();
             let out = black_box(f());
@@ -71,7 +72,8 @@ pub mod bench {
             let run_duration = end.duration_since(start).as_secs_f64();
 
             if run_duration > 0.001 {
-                duration += run_duration;
+                total_duration += run_duration;
+                measurements.push(run_duration);
                 count += 1;
             } else {
                 // Very fast function, run it a lot to get a good measurement
@@ -80,10 +82,15 @@ pub mod bench {
                     black_box(f());
                 }
                 let end = Instant::now();
-                duration += end.duration_since(start).as_secs_f64();
+                let run_duration = end.duration_since(start).as_secs_f64();
+                total_duration += run_duration;
+                measurements.push(run_duration / 1000.0);
                 count += 1000;
             }
         }
-        duration / f64::from(count)
+        let _average = total_duration / f64::from(count);
+        let middle = measurements.len() / 2;
+        let (left, median, right) = measurements.select_nth_unstable_by(middle, |a, b| a.partial_cmp(b).unwrap());
+        *median
     }
 }

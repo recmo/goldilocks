@@ -30,6 +30,7 @@ impl GoodThomas {
             1,
             "Good-Thomas factors ({n1}×{n2}) must be coprime."
         );
+        // eprintln!("GoodThomas({n1} x {n2})");
 
         // Inner NTTs
         let inner_n1 = super::strategy(n1);

@@ -38,6 +38,11 @@ impl Ntt for Arc<dyn Ntt> {
     }
 }
 
+pub fn clear_cache() {
+    let mut lock = CACHE.lock().unwrap();
+    lock.clear();
+}
+
 pub fn strategy(size: usize) -> Arc<dyn Ntt> {
     let lock = CACHE.lock().unwrap();
     if let Some(ntt) = lock.get(&size) {
