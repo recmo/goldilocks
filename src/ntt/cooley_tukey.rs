@@ -52,8 +52,8 @@ impl CooleyTukey {
         // Compute (parallel) work sizes
         // If these are larger than `n` `rayon` will not parallelize and run
         // on the current thread, which is what we want.
-        let a_work_size = cmp::max(size, div_round_up(MIN_WORK_SIZE, a) * a);
-        let b_work_size = cmp::max(size, div_round_up(MIN_WORK_SIZE, b) * b);
+        let a_work_size = cmp::min(size, div_round_up(MIN_WORK_SIZE, a) * a);
+        let b_work_size = cmp::min(size, div_round_up(MIN_WORK_SIZE, b) * b);
 
         Self {
             size,

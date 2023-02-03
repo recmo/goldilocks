@@ -79,8 +79,8 @@ impl GoodThomas {
         // Compute (parallel) work sizes
         // If these are larger than `n` `rayon` will not parallelize and run
         // on the current thread, which is what we want.
-        let n1_work_size = cmp::max(n, div_round_up(MIN_WORK_SIZE, n1) * n1);
-        let n2_work_size = cmp::max(n, div_round_up(MIN_WORK_SIZE, n2) * n2);
+        let n1_work_size = cmp::min(n, div_round_up(MIN_WORK_SIZE, n1) * n1);
+        let n2_work_size = cmp::min(n, div_round_up(MIN_WORK_SIZE, n2) * n2);
 
         Self {
             split: (n1, n2),
