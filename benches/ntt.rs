@@ -52,7 +52,7 @@ fn main() {
     for size in divisors()
         .iter()
         .map(|&n| n as usize)
-        .filter(|&n| n > 2 && n <= max_size && (cli.all || is_smooth(n)))
+        .filter(|&n| n >= 2 && n <= max_size && (cli.all || is_smooth(n)))
     {
         let input = &mut input[..size];
 

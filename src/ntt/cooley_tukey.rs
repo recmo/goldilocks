@@ -22,7 +22,7 @@ pub struct CooleyTukey {
 
 impl CooleyTukey {
     pub fn new(a: usize, b: usize) -> Self {
-        //eprintln!("CooleyTukey({a} x {b})");
+        // eprintln!("CooleyTukey({a} x {b})");
         let size = a * b;
         let inner_a = super::strategy(a);
         let inner_b = super::strategy(b);

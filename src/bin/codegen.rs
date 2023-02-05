@@ -40,6 +40,7 @@ fn ntt(vars: &mut [&str]) {
         ..=1 => {}
         2 => naive_2(vars),
         3 => naive_3(vars),
+        // 5 => winograd_5(vars),
         5 | 17 | 257 | 65537 => rader(vars),
         n => {
             let a = split(n);
@@ -59,11 +60,47 @@ pub fn naive_2(vars: &mut [&str]) {
     println!("        let ({a}, {b}) = ({a} + {b}, {a} - {b});");
 }
 
+/// Naive 3-point NTT.
+///
+/// For size 3 the Rader and Winograd algorithms are identical and result in
+/// six additions and two multiplications. The naive algorithm has six additions
+/// and four multiplications, but the multiplications can be done as bit-shifts.
 pub fn naive_3(vars: &mut [&str]) {
     let [a, b, c] = vars else { panic!() };
     println!("        let ({a}, {b}, {c}) = ({a} + {b} + {c},");
     println!("            {a} + ({b} << 64) - ({c} << 32),");
     println!("            {a} - ({b} << 32) + ({c} << 64));");
+}
+
+pub fn winograd_5(vars: &mut [&str]) {
+    let [a0, a1, a2, a3, a4] = vars else { panic!() };
+    println!(
+        "
+        let s1 = {a1} + {a3};
+        let s2 = {a2} + {a4};
+        let s3 = s1 + s2;
+        let t = {a0};
+        let {a0} = {a0} + s3;
+        let s4 = s1 - s2;
+        let s5 = a1 - a3;
+        let s6 = a4 - a2;
+        let s7 = s5 - s6;
+        let m1 = s3 * Field::new(??);
+        let m2 = s4 * Field::new(??);
+        let m3 = s5 * Field::new(??);
+        let m4 = s6 * Field::new(??);
+        let m5 = s7 * Field::new(??);
+        let m1 = m1 + t;
+        let t1 = m1 + m2;
+        let t2 = m3 + m5;
+        let t3 = m1 - m2;
+        let t4 = m4 - m5;
+        let {a1} = t1 + t2;
+        let {a2} = t3 + t4;
+        let {a3} = t1 - t2;
+        let {a4} = t3 - t4;
+    "
+    );
 }
 
 fn rader(vars: &mut [&str]) {

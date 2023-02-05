@@ -90,7 +90,8 @@ pub mod bench {
         }
         let _average = total_duration / f64::from(count);
         let middle = measurements.len() / 2;
-        let (left, median, right) = measurements.select_nth_unstable_by(middle, |a, b| a.partial_cmp(b).unwrap());
+        let (left, median, right) =
+            measurements.select_nth_unstable_by(middle, |a, b| a.partial_cmp(b).unwrap());
         *median
     }
 }

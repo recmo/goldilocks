@@ -10,6 +10,8 @@ use std::{
     },
 };
 
+// OPT: We could also store the permutation function and the starts of cycles.
+
 pub struct Cycles<I: Index> {
     size:     usize,
     cycles:   Vec<(usize, Vec<I>)>,

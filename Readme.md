@@ -10,6 +10,8 @@ $$
 
 * [ ] Optimize large transpose.
 * [ ] Winograd NTT.
+* [ ] <https://doi.org/10.1147/rd.222.0134>
+* [ ] <https://eccc.weizmann.ac.il/report/2021/103>
 
 ## Build run test bench
 
@@ -88,3 +90,8 @@ https://netlib.org/utk/people/JackDongarra/CCDSC-2014/talk35.pdf
 
 https://github.com/ejmahler/RustFFT
 
+https://gitlab.com/hatsya/open-source/cpads/-/blob/master/include/cpads/algebra/ff64.hpp
+
+https://github.com/mir-protocol/plonky2/issues/1
+
+https://github.com/mir-protocol/plonky2/issues/8
