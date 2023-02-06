@@ -31,6 +31,8 @@ Run Criterion benchmarks
 
 ```sh
 cargo bench --all-features --bench criterion
+
+cargo bench --all-features --bench criterion --package goldilocks-merkle
 ```
 
 Create a baseline

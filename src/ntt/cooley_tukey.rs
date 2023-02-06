@@ -21,6 +21,7 @@ pub struct CooleyTukey {
 }
 
 impl CooleyTukey {
+    #[allow(clippy::similar_names)] // TODO
     pub fn new(a: usize, b: usize) -> Self {
         // eprintln!("CooleyTukey({a} x {b})");
         let size = a * b;

@@ -100,6 +100,7 @@ pub fn process_layer(input: &[u8], output: &mut [u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::proptest;
     use std::fmt::Write;
 
     fn to_hex(bytes: &[u8]) -> String {
@@ -160,5 +161,37 @@ mod tests {
             "6b f7 5f a2 23 91 98 db 47 72 e3 64 78 f8 e1 9b 0f 37 12 05 f6 a9 a9 3a 27 3f 51 df \
              37 12 28 88"
         );
+    }
+
+    /// Compare against the XKCP bindings.
+    #[test]
+    fn test_xkcp() {
+        use proptest::{collection::vec, num::u8};
+        proptest!(|(input in vec(u8::ANY, 0..=166))| {
+            let actual = k12::<32>(&input);
+            let expected = xkcp_k12::hash(&input);
+            assert_eq!(
+                to_hex(&actual[..]),
+                to_hex(expected.as_bytes()),
+            );
+        });
+    }
+
+    /// Compare against the RustCrypto implementation.
+    #[test]
+    fn test_rust_crypto() {
+        use proptest::{collection::vec, num::u8};
+        use rust_crypto_k12::digest::{ExtendableOutput, Update};
+        proptest!(|(input in vec(u8::ANY, 0..=166))| {
+            let actual = k12::<32>(&input);
+            let mut k12 = rust_crypto_k12::KangarooTwelve::new();
+            k12.update(&input);
+            let mut expected = [0u8; 32];
+            k12.finalize_xof_into(&mut expected);
+            assert_eq!(
+                to_hex(&actual[..]),
+                to_hex(&expected[..]),
+            );
+        });
     }
 }

@@ -83,6 +83,7 @@ pub fn vsub(a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
 /// Aarch64 vector implementation of [`mont_reduce_128`].
 #[inline(always)]
 #[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
     unsafe {
         // let (a, e) = x0.overflowing_add(x0 << 32);
@@ -117,6 +118,7 @@ pub fn mont_reduce_128(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
 /// compiler.
 #[inline(always)]
 #[must_use]
+#[allow(clippy::many_single_char_names)]
 pub fn mont_reduce_128_asm(x0: uint64x2_t, x1: uint64x2_t) -> uint64x2_t {
     // let (a, e) = x0.overflowing_add(x0 << 32);
     let t = inst::shl32(x0);

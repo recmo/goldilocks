@@ -52,6 +52,9 @@ rand = { version = "0.8.5", features = ["std_rng"] }
 clap = { version = "4.0.32", features = ["derive"] }
 proptest = "1.0.0"
 goldilocks-merkle = { path = "./merkle" }
+rust_crypto_k12 = { package = "k12", version = "0.2.1" }
+xkcp_k12 = { package = "kangarootwelve_xkcp", version = "0.1.5" }
+digest = "0.10.6"
 
 [profile.release]
 debug = true

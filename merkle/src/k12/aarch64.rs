@@ -1,3 +1,4 @@
+#![cfg(target_arch = "aarch64")]
 use super::{generic, next_layer_size, BLOCK_SIZE, HASH_SIZE};
 
 const RC: [u64; 13] = [
@@ -48,7 +49,7 @@ fn k12_2(input: &[u8], output: &mut [u8]) {
             dup.2d v23, xzr
             dup.2d v24, xzr
             
-        0:  sub	{loop}, {loop}, #1
+        0:  sub	{loop:x}, {loop:x}, #1
 
             // Theta Calculations
             eor3.16b   v25, v20, v15, v10
@@ -127,7 +128,7 @@ fn k12_2(input: &[u8], output: &mut [u8]) {
             eor.16b     v0,  v0, v26
 
             // Rounds loop
-            cbnz    {loop}, 0b
+            cbnz    {loop:x}, 0b
 
             // Write output (first 256 bits of state)
             st4.d {{ v0- v3}}[0], [{output}], #32
