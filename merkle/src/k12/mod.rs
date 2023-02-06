@@ -7,7 +7,12 @@ mod generic;
 
 use rayon::prelude::*;
 
+#[cfg(target_arch = "aarch64")]
 pub use aarch64::process_layer;
+
+#[cfg(not(target_arch = "aarch64"))]
+pub use generic::process_layer;
+
 
 const BLOCK_SIZE: usize = 160; // Exactly 20 Field or 4 Hash.
 const HASH_SIZE: usize = 32;
