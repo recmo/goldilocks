@@ -7,6 +7,7 @@ use std::{fmt, ops::Neg};
 /// An element in the Goldilocks field.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(bytemuck::TransparentWrapper, bytemuck::Zeroable, bytemuck::Pod)]
 #[repr(transparent)]
 pub struct Field(u64);
 
