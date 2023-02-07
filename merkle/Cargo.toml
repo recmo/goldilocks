@@ -13,8 +13,9 @@ edition = "2021"
 resolver = "2"
 
 [features]
-default = []
+default = ["xkcp"]
 bench = ["dep:criterion", "rand", "dep:rust_crypto_k12", "dep:xkcp_k12"]
+xkcp = ["dep:xkcp_k12"]
 
 [[bench]]
 name = "criterion"

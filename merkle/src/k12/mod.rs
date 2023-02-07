@@ -11,8 +11,18 @@ use rayon::prelude::*;
 #[cfg(all(target_arch = "aarch64", target_feature = "sha3"))]
 pub use aarch64::process_layer;
 
-#[cfg(not(all(target_arch = "aarch64", target_feature = "sha3")))]
+#[cfg(all(
+    not(all(target_arch = "aarch64", target_feature = "sha3")),
+    feature = "xkcp"
+))]
 pub use xkcp::process_layer;
+
+#[cfg(all(
+    not(all(target_arch = "aarch64", target_feature = "sha3")),
+    not(feature = "xkcp")
+))]
+pub use generic::process_layer;
+
 
 const BLOCK_SIZE: usize = 160; // Exactly 20 Field or 4 Hash.
 const HASH_SIZE: usize = 32;
