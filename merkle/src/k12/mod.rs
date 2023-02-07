@@ -4,15 +4,15 @@
 
 mod aarch64;
 mod generic;
+mod xkcp;
 
 use rayon::prelude::*;
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", target_feature = "sha3"))]
 pub use aarch64::process_layer;
 
-#[cfg(not(target_arch = "aarch64"))]
-pub use generic::process_layer;
-
+#[cfg(not(all(target_arch = "aarch64", target_feature = "sha3")))]
+pub use xkcp::process_layer;
 
 const BLOCK_SIZE: usize = 160; // Exactly 20 Field or 4 Hash.
 const HASH_SIZE: usize = 32;
@@ -30,6 +30,7 @@ const fn div_round_up(a: usize, b: usize) -> usize {
 pub fn merkle_tree(values: &[u8]) -> Vec<Vec<u8>> {
     let mut layers = Vec::new();
     let mut layer = values;
+    // OPT: MaybeUninit.
     while layer.len() > HASH_SIZE {
         let mut next_layer = vec![0u8; next_layer_size(layer.len())];
 
@@ -140,15 +141,4 @@ pub mod bench {
         }
     }
 
-    fn xkcp(input: &[u8], output: &mut [u8]) {
-        use xkcp_k12::hash;
-        assert!(output.len() >= next_layer_size(output.len()));
-
-        for (input, output) in input
-            .chunks(BLOCK_SIZE)
-            .zip(output.chunks_exact_mut(HASH_SIZE))
-        {
-            output.copy_from_slice(hash(input).as_bytes());
-        }
-    }
 }

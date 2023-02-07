@@ -1,4 +1,4 @@
-#![cfg(target_arch = "aarch64")]
+#![cfg(all(target_arch = "aarch64", target_feature = "sha3"))]
 use super::{generic, next_layer_size, BLOCK_SIZE, HASH_SIZE};
 
 const RC: [u64; 13] = [
