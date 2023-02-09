@@ -1,0 +1,36 @@
+[package]
+name = "goldilocks-pcs"
+description = "A fast PCS implementation for the Goldilocks prime field"
+readme = "Readme.md"
+keywords.workspace = true
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+categories.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[features]
+default = ["xkcp"]
+bench = ["dep:criterion", "dep:rand", "xkcp", "dep:rust_crypto_k12"]
+xkcp = ["dep:xkcp_k12"]
+
+[[bench]]
+name = "criterion"
+harness = false
+required-features = ["bench"]
+
+[dependencies]
+rayon.workspace = true
+xkcp_k12 = { workspace = true, optional = true }
+
+# For benchmarking only
+rand = { workspace = true, optional = true }
+criterion = { workspace = true, optional = true }
+rust_crypto_k12 = { workspace = true, optional = true }
+
+[dev-dependencies]
+rand = { version = "0.8.5", features = ["std_rng"] }
+clap = { version = "4.0.32", features = ["derive"] }
+proptest = "1.0.0"

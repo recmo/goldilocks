@@ -1,0 +1,47 @@
+[package]
+name = "goldilocks-ntt"
+description = "A fast NTT implementation for the Goldilocks prime field"
+readme = "Readme.md"
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+categories.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+bench = ["dep:criterion", "dep:winter-math", "rand", "dep:clap", "dep:tracing-subscriber", "dep:goldilocks-pcs"]
+
+[[bench]]
+name = "criterion"
+harness = false
+required-features = ["bench"]
+
+[[bench]]
+name = "ntt"
+harness = false
+required-features = ["bench"]
+
+[[bin]]
+name = "codegen"
+path = "src/bin/codegen.rs"
+
+[dependencies]
+serde = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+rayon.workspace = true
+bytemuck.workspace = true
+
+# For benchmarking only
+tracing-subscriber = { workspace = true, optional = true }
+clap = { workspace = true, optional = true }
+criterion = { workspace = true, optional = true }
+winter-math = { version = "0.4.2", optional = true, features = ["concurrent"] }
+goldilocks-pcs = { path = "../pcs", optional = true }
+
+[dev-dependencies]
+rand = { workspace = true, features = ["std_rng"] }
+clap = { workspace = true, features = ["derive"] }
+proptest.workspace = true

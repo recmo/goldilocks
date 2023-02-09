@@ -1,6 +1,6 @@
 #![cfg(feature = "xkcp")]
+use super::{next_layer_size, BLOCK_SIZE, HASH_SIZE};
 use xkcp_k12::hash;
-use super::{BLOCK_SIZE, HASH_SIZE, next_layer_size};
 
 pub fn process_layer(input: &[u8], output: &mut [u8]) {
     assert!(output.len() >= next_layer_size(output.len()));

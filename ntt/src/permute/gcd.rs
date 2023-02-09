@@ -1,16 +1,7 @@
-use super::{
-    cycles::{self, Cycles},
-    square, Permute,
-};
+use super::{cycles::Cycles, square, Permute};
 use crate::utils::gcd;
 use rayon::prelude::*;
-use std::{
-    cmp::min,
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Arc,
-    },
-};
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 /// Transpose a matrix in place.
 pub struct Gcd {
@@ -81,7 +72,7 @@ impl<T: 'static + Copy + Send + Sync> Permute<T> for Gcd {
             let values = AtomicPtr::new(values.as_mut_ptr());
 
             (0..(self.rows * self.cols)).into_par_iter().for_each(|i| {
-                let values = unsafe { values.load(Ordering::Relaxed) };
+                let values = values.load(Ordering::Relaxed);
                 let i = i / self.cols;
                 let j = i % self.cols;
                 unsafe {

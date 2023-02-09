@@ -108,7 +108,7 @@ fn main() {
                 let n = input.len();
                 let input: &[u8] = bytemuck::cast_slice(input);
                 assert_eq!(input.len(), n * 8);
-                time(|| goldilocks_merkle::k12::merkle_tree(&input))
+                time(|| goldilocks_pcs::k12::merkle_tree(&input))
             }
         };
         let throughput = (size as f64) / duration;

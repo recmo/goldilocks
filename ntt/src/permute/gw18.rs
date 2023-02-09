@@ -1,4 +1,6 @@
-//! Gustavson FG, Walker DW. Algorithms for in-place matrix transposition. Concurrency Computat Pract Exper. 2019;31:e5071. https://doi.org/10.1002/cpe.5071
+//! Gustavson FG, Walker DW. Algorithms for in-place matrix transposition.
+//! Concurrency and Computation Practice Experience 2019
+//! <https://doi.org/10.1002/cpe.5071>
 
 use std::{cmp::min, sync::Arc};
 

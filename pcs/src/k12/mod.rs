@@ -23,7 +23,6 @@ pub use xkcp::process_layer;
 ))]
 pub use generic::process_layer;
 
-
 const BLOCK_SIZE: usize = 160; // Exactly 20 Field or 4 Hash.
 const HASH_SIZE: usize = 32;
 
@@ -97,17 +96,13 @@ pub mod bench {
 
         bench_k12(&mut group, "generic", generic::process_layer);
         bench_k12(&mut group, "rust_crypto", rust_crypto);
-        bench_k12(&mut group, "xkcp", xkcp);
-        
+        bench_k12(&mut group, "xkcp", xkcp::process_layer);
+
         #[cfg(target_arch = "aarch64")]
         bench_k12(&mut group, "aarch64", aarch64::process_layer);
     }
-    
-    fn bench_k12(
-        group: &mut BenchmarkGroup<WallTime>,
-        name: &str,
-        f: impl Fn(&[u8], &mut [u8]),
-    ) {
+
+    fn bench_k12(group: &mut BenchmarkGroup<WallTime>, name: &str, f: impl Fn(&[u8], &mut [u8])) {
         bench_k12_n::<1>(group, name, &f);
         bench_k12_n::<1024>(group, name, &f);
     }
@@ -150,5 +145,4 @@ pub mod bench {
             k12.finalize_xof_reset_into(output);
         }
     }
-
 }

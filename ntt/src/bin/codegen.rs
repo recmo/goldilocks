@@ -301,11 +301,6 @@ pub fn ntt_01(_values: &mut [Field]) {{}}
     }
 
     // Generate tests
-    let size_list = sizes
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
     println!(
         "#[cfg(test)]
 mod tests {{
