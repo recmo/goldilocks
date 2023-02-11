@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "bench",
     "ntt",
     "pcs",
 ]
@@ -28,11 +29,14 @@ bytemuck = { version = "1.13.0", features = ["derive"] }
 rust_crypto_k12 = { package = "k12", version = "0.2.1" }
 xkcp_k12 = { package = "kangarootwelve_xkcp", version = "0.1.5"  }
 
+# GPU support
+wgpu = "0.15.1"
+futures-intrusive = "0.5.0"
+pollster = "0.3.0"
+
 # Dev/bench dependencies
 criterion = "0.4.0"
 proptest = "1.0.0"
-clap = { version = "4.0.32", features = ["derive"] }
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 
 [profile.release]
 debug = true

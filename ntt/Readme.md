@@ -1,4 +1,4 @@
-# Goldilocks NTT and PCS
+# Goldilocks NTT
 
 Fast number theoretic transforms over the 64-bit Goldilocks prime field $\mathbb{F}_p$ with
 

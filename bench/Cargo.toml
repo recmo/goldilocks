@@ -1,0 +1,22 @@
+[package]
+name = "goldilocks-bench"
+description = "Benchmarking tool for Goldilocks NTT and PCS"
+publish = false
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+categories.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+bytemuck.workspace = true
+rand.workspace = true
+rayon.workspace = true
+goldilocks-ntt = { path = "../ntt", features = ["rand"] }
+goldilocks-pcs = { path = "../pcs" }
+clap = { version = "4.0.32", features = ["derive"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+winter-math = { version = "0.4.2", optional = true, features = ["concurrent"] }

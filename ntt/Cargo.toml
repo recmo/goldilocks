@@ -12,15 +12,11 @@ edition.workspace = true
 
 [features]
 default = []
-bench = ["dep:criterion", "dep:winter-math", "rand", "dep:clap", "dep:tracing-subscriber", "dep:goldilocks-pcs"]
+gpu = ["dep:wgpu", "dep:futures-intrusive", "dep:pollster"]
+bench = ["dep:criterion"]
 
 [[bench]]
 name = "criterion"
-harness = false
-required-features = ["bench"]
-
-[[bench]]
-name = "ntt"
 harness = false
 required-features = ["bench"]
 
@@ -34,14 +30,14 @@ rand = { workspace = true, optional = true }
 rayon.workspace = true
 bytemuck.workspace = true
 
+# For GPU support
+wgpu = { workspace = true, optional = true }
+futures-intrusive = { workspace = true, optional = true }
+pollster = { workspace = true, optional = true }
+
 # For benchmarking only
-tracing-subscriber = { workspace = true, optional = true }
-clap = { workspace = true, optional = true }
 criterion = { workspace = true, optional = true }
-winter-math = { version = "0.4.2", optional = true, features = ["concurrent"] }
-goldilocks-pcs = { path = "../pcs", optional = true }
 
 [dev-dependencies]
 rand = { workspace = true, features = ["std_rng"] }
-clap = { workspace = true, features = ["derive"] }
 proptest.workspace = true
