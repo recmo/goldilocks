@@ -177,3 +177,15 @@ mod tests {
         test_ntt(CooleyTukey::new(16, 24));
     }
 }
+
+#[cfg(feature = "bench")]
+#[doc(hidden)]
+pub mod bench {
+    use super::{super::bench::bench_ntt, *};
+    use criterion::Criterion;
+
+    pub fn group(criterion: &mut Criterion) {
+        bench_ntt(criterion, "cooley_tukey", CooleyTukey::new(16, 16));
+        bench_ntt(criterion, "cooley_tukey", CooleyTukey::new(256, 257));
+    }
+}

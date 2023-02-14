@@ -9,7 +9,7 @@ mod xkcp;
 use rayon::prelude::*;
 
 #[cfg(all(target_arch = "aarch64", target_feature = "sha3"))]
-pub use aarch64::process_layer;
+pub use aarch64::{k12_pow_2, process_layer};
 
 #[cfg(all(
     not(all(target_arch = "aarch64", target_feature = "sha3")),
@@ -22,6 +22,8 @@ pub use xkcp::process_layer;
     not(feature = "xkcp")
 ))]
 pub use generic::process_layer;
+
+pub use generic::k12;
 
 const BLOCK_SIZE: usize = 160; // Exactly 20 Field or 4 Hash.
 const HASH_SIZE: usize = 32;

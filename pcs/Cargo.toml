@@ -23,6 +23,7 @@ required-features = ["bench"]
 
 [dependencies]
 rayon.workspace = true
+bytemuck.workspace = true
 xkcp_k12 = { workspace = true, optional = true }
 
 # For benchmarking only

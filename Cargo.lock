@@ -588,6 +588,7 @@ dependencies = [
 name = "goldilocks-pcs"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "clap 4.0.32",
  "criterion",
  "k12",

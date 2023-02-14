@@ -1,8 +1,7 @@
 #![cfg(all(target_arch = "aarch64", target_feature = "sha3"))]
 use super::{generic, next_layer_size, BLOCK_SIZE, HASH_SIZE};
 
-const RC: [u64; 13] = [
-    0x8000000000000700, // Padding value
+const RC: [u64; 12] = [
     0x000000008000808b,
     0x800000000000008b,
     0x8000000000008089,
@@ -41,95 +40,18 @@ fn k12_2(input: &[u8], output: &mut [u8]) {
             ld4.d {{v16-v19}}[1], [{input}], #32
 
             // Empty customization string and padding.
-            ld1r.2d    {{v20}}, [{rc}], #8
+            movz {input}, #0x0700
+            movk {input}, #0x8000, lsl #48
+            dup.2d v20, {input}
 
             // Zero the capacity bits
             dup.2d v21, xzr
             dup.2d v22, xzr
             dup.2d v23, xzr
             dup.2d v24, xzr
-            
-        0:  sub	{loop:x}, {loop:x}, #1
-
-            // Theta Calculations
-            eor3.16b   v25, v20, v15, v10
-            eor3.16b   v26, v21, v16, v11
-            eor3.16b   v27, v22, v17, v12
-            eor3.16b   v28, v23, v18, v13
-            eor3.16b   v29, v24, v19, v14
-            eor3.16b   v25, v25,  v5,  v0
-            eor3.16b   v26, v26,  v6,  v1
-            eor3.16b   v27, v27,  v7,  v2
-            eor3.16b   v28, v28,  v8,  v3
-            eor3.16b   v29, v29,  v9,  v4
-            rax1.2d    v30, v25, v27
-            rax1.2d    v31, v26, v28
-            rax1.2d    v27, v27, v29
-            rax1.2d    v28, v28, v25
-            rax1.2d    v29, v29, v26
-            
-            // Rho and Phi
-            eor.16b     v0,  v0, v29
-            xar.2d     v25,  v1, v30, #64 -  1
-            xar.2d      v1,  v6, v30, #64 - 44
-            xar.2d      v6,  v9, v28, #64 - 20
-            xar.2d      v9, v22, v31, #64 - 61
-            xar.2d     v22, v14, v28, #64 - 39
-            xar.2d     v14, v20, v29, #64 - 18
-            xar.2d     v26,  v2, v31, #64 - 62
-            xar.2d      v2, v12, v31, #64 - 43
-            xar.2d     v12, v13, v27, #64 - 25
-            xar.2d     v13, v19, v28, #64 -  8
-            xar.2d     v19, v23, v27, #64 - 56
-            xar.2d     v23, v15, v29, #64 - 41
-            xar.2d     v15,  v4, v28, #64 - 27
-            xar.2d     v28, v24, v28, #64 - 14
-            xar.2d     v24, v21, v30, #64 -  2
-            xar.2d      v8,  v8, v27, #64 - 55
-            xar.2d      v4, v16, v30, #64 - 45
-            xar.2d     v16,  v5, v29, #64 - 36
-            xar.2d      v5,  v3, v27, #64 - 28
-            xar.2d     v27, v18, v27, #64 - 21
-            xar.2d      v3, v17, v31, #64 - 15
-            xar.2d     v30, v11, v30, #64 - 10
-            xar.2d     v31,  v7, v31, #64 -  6
-            xar.2d     v29, v10, v29, #64 -  3
-
-            // Chi and Iota
-            bcax.16b   v20, v26, v22,  v8
-            bcax.16b   v21,  v8, v23, v22
-            bcax.16b   v22, v22, v24, v23
-            bcax.16b   v23, v23, v26, v24
-            bcax.16b   v24, v24,  v8, v26
-            
-            ld1r.2d    {{v26}}, [{rc}], #8
-            bcax.16b   v17, v30, v19,  v3
-            bcax.16b   v18,  v3, v15, v19
-            bcax.16b   v19, v19, v16, v15
-            bcax.16b   v15, v15, v30, v16
-            bcax.16b   v16, v16,  v3, v30
-            
-            bcax.16b   v10, v25, v12, v31
-            bcax.16b   v11, v31, v13, v12
-            bcax.16b   v12, v12, v14, v13
-            bcax.16b   v13, v13, v25, v14
-            bcax.16b   v14, v14, v31, v25
-            bcax.16b    v7, v29,  v9,  v4
-            bcax.16b    v8,  v4,  v5,  v9
-            bcax.16b    v9,  v9,  v6,  v5
-            bcax.16b    v5,  v5, v29,  v6
-            bcax.16b    v6,  v6,  v4, v29
-            
-            bcax.16b    v3, v27,  v0, v28
-            bcax.16b    v4, v28,  v1,  v0
-            bcax.16b    v0,  v0,  v2,  v1
-            bcax.16b    v1,  v1, v27,  v2
-            bcax.16b    v2,  v2, v28, v27
-            eor.16b     v0,  v0, v26
-
-            // Rounds loop
-            cbnz    {loop:x}, 0b
-
+        ",
+        include_str!("aarch64.asm"),
+        "
             // Write output (first 256 bits of state)
             st4.d {{ v0- v3}}[0], [{output}], #32
             st4.d {{ v0- v3}}[1], [{output}], #32
@@ -139,38 +61,13 @@ fn k12_2(input: &[u8], output: &mut [u8]) {
             output = inout(reg) output.as_mut_ptr() => _,
             loop = inout(reg) 12 => _,
             rc = inout(reg) RC.as_ptr() => _,
-            out("v0") _,
-            out("v1") _,
-            out("v2") _,
-            out("v3") _,
-            out("v4") _,
-            out("v5") _,
-            out("v6") _,
-            out("v7") _,
-            out("v8") _,
-            out("v9") _,
-            out("v10") _,
-            out("v11") _,
-            out("v12") _,
-            out("v13") _,
-            out("v14") _,
-            out("v15") _,
-            out("v16") _,
-            out("v17") _,
-            out("v18") _,
-            out("v19") _,
-            out("v20") _,
-            out("v21") _,
-            out("v22") _,
-            out("v23") _,
-            out("v24") _,
-            out("v25") _,
-            out("v26") _,
-            out("v27") _,
-            out("v28") _,
-            out("v29") _,
-            out("v30") _,
-            out("v31") _,
+            out("v0") _, out("v1") _, out("v2") _, out("v3") _, out("v4") _,
+            out("v5") _, out("v6") _, out("v7") _, out("v8") _, out("v9") _,
+            out("v10") _, out("v11") _, out("v12") _, out("v13") _, out("v14") _,
+            out("v15") _, out("v16") _, out("v17") _, out("v18") _, out("v19") _,
+            out("v20") _, out("v21") _, out("v22") _, out("v23") _, out("v24") _,
+            out("v25") _, out("v26") _, out("v27") _, out("v28") _, out("v29") _,
+            out("v30") _, out("v31") _,
             options(nostack)
         );
     }
@@ -189,6 +86,81 @@ fn k12_2(input: &[u8], output: &mut [u8]) {
     // st4.d {{v16-v19}}[1], [{state}], #32
     // st4.d {{v20-v23}}[1], [{state}], #32
     // st1.d {{v24}}[1], [{state}], #8
+}
+
+/// Compute two K12 proof-of-work hashes in parallel.
+pub fn k12_pow_2(challenge: &[u8; 32], nonce_0: u64, nonce_1: u64) -> (u64, u64) {
+    let out_0: u64;
+    let out_1: u64;
+    unsafe {
+        core::arch::asm!("
+            // Read challenge into v0-v3 replicated.
+            ld4.2d {{ v0- v3}}, [{challenge}]
+            dup.2d v0, v0[0]
+            dup.2d v1, v1[0]
+            dup.2d v2, v2[0]
+            dup.2d v3, v3[0]
+
+            // Read nonces into v4
+            mov.d v4[0], {r0}
+            mov.d v4[1], {r1}
+
+            // Empty customization string and padding.
+            // TODO: There must be a better way to do this, but LLVM asm rejects
+            // everything I tried.
+            mov {r0}, #0x0700
+            dup.2d v5, {r0}
+
+            // Zero padding
+            // TODO: Unroll first round of loop
+            dup.2d v6, xzr
+            dup.2d v7, xzr
+            dup.2d v8, xzr
+            dup.2d v9, xzr
+            dup.2d v10, xzr
+            dup.2d v11, xzr
+            dup.2d v12, xzr
+            dup.2d v13, xzr
+            dup.2d v14, xzr
+            dup.2d v15, xzr
+            dup.2d v16, xzr
+            dup.2d v17, xzr
+            dup.2d v18, xzr
+            dup.2d v19, xzr
+
+            // Set final padding bit
+            mov {r0}, #0x8000000000000000
+            dup.2d v20, {r0}
+            
+            // Zero the capacity bits
+            dup.2d v21, xzr
+            dup.2d v22, xzr
+            dup.2d v23, xzr
+            dup.2d v24, xzr
+        ",
+        include_str!("aarch64.asm"),
+        "
+            // Write outputs (first 64 bits of state)
+            // TODO: Unroll last round of loop
+            mov {r0}, v0.d[0]
+            mov {r1}, v0.d[1]
+        ",
+            challenge = in(reg) challenge.as_ptr(),
+            r0 = inout(reg) nonce_0 => out_0,
+            r1 = inout(reg) nonce_1 => out_1,
+            loop = inout(reg) 12 => _,
+            rc = inout(reg) RC.as_ptr() => _,
+            out("v0") _, out("v1") _, out("v2") _, out("v3") _, out("v4") _,
+            out("v5") _, out("v6") _, out("v7") _, out("v8") _, out("v9") _,
+            out("v10") _, out("v11") _, out("v12") _, out("v13") _, out("v14") _,
+            out("v15") _, out("v16") _, out("v17") _, out("v18") _, out("v19") _,
+            out("v20") _, out("v21") _, out("v22") _, out("v23") _, out("v24") _,
+            out("v25") _, out("v26") _, out("v27") _, out("v28") _, out("v29") _,
+            out("v30") _, out("v31") _,
+            options(nostack)
+        );
+    }
+    (out_0, out_1)
 }
 
 pub fn process_layer(input: &[u8], output: &mut [u8]) {
@@ -257,6 +229,14 @@ mod tests {
         k12_2(&input[1..], &mut output);
         reference(&input[1..], &mut expected);
         assert_eq!(to_hex(&output), to_hex(&expected));
+    }
+
+    #[test]
+    fn test_pow_d() {
+        let challenge = [0x55; 32];
+        let (a, b) = k12_pow_2(&challenge, u64::MAX, 0);
+        assert_eq!(a, 14608096357653754266);
+        assert_eq!(b, 2237294155800119683);
     }
 
     #[test]

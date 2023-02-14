@@ -23,7 +23,7 @@ resolver = "2"
 serde = "1.0.151"
 rand = "0.8.5"
 rayon = "1.6.1"
-bytemuck = { version = "1.13.0", features = ["derive"] }
+bytemuck = { version = "1.13.0", features = ["derive", "min_const_generics"] }
 
 # Alternative K12 implementations
 rust_crypto_k12 = { package = "k12", version = "0.2.1" }

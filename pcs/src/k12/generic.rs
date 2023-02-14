@@ -78,11 +78,7 @@ pub fn k12<const H: usize>(input: &[u8]) -> [u8; H] {
     state[167] ^= 0x80;
 
     // Permute
-    let lanes = unsafe {
-        // SAFETY: The state is 200 bytes long, which is exactly 25 u64s.
-        mem::transmute::<&mut [u8; 200], &mut [u64; 25]>(&mut state)
-    };
-    keccak_p1600_12(lanes);
+    keccak_p1600_12(bytemuck::cast_mut(&mut state));
 
     state[0..H].try_into().unwrap()
 }

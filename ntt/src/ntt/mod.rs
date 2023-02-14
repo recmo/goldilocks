@@ -1,5 +1,6 @@
 mod cooley_tukey;
 mod good_thomas;
+pub mod gpu;
 pub mod naive;
 mod rader;
 pub mod small;
@@ -16,7 +17,8 @@ use std::{
 };
 
 // Minimum work size (in elements) for parallelization.
-const MIN_WORK_SIZE: usize = 1 << 14;
+// const MIN_WORK_SIZE: usize = 1 << 14;
+const MIN_WORK_SIZE: usize = 134217728 / 8;
 
 static CACHE: Mutex<BTreeMap<usize, Arc<dyn Ntt>>> = Mutex::new(BTreeMap::new());
 
@@ -130,6 +132,7 @@ mod tests {
         let mut expected = values.clone();
         naive::ntt(&mut expected);
         ntt.ntt(&mut values);
+        assert_eq!(values, expected);
         for (&value, expected) in values.iter().zip(expected) {
             assert_eq!(value, expected);
         }
@@ -139,21 +142,32 @@ mod tests {
 #[cfg(feature = "bench")]
 #[doc(hidden)]
 pub mod bench {
+    use crate::utils::div_round_up;
+
     use super::*;
     use criterion::{BenchmarkId, Criterion, Throughput};
     use rand::{thread_rng, Rng};
 
     pub fn group(criterion: &mut Criterion) {
         rader::bench::group(criterion);
+        small::bench::group(criterion);
         good_thomas::bench::group(criterion);
+
+        #[cfg(feature = "gpu")]
+        gpu::bench::group(criterion);
     }
 
     pub fn bench_ntt(criterion: &mut Criterion, name: &str, ntt: impl Ntt) {
+        // Use a multiple of the NTT size larger than the minimum work size.
+        let size = ntt.len();
+        let count = div_round_up(MIN_WORK_SIZE, size);
+        let total = count * size;
+
         let mut rng = thread_rng();
-        let mut values = (0..ntt.len()).map(|_| rng.gen()).collect::<Vec<_>>();
+        let mut values = (0..total).map(|_| rng.gen()).collect::<Vec<_>>();
         let mut group = criterion.benchmark_group("ntt");
         group.throughput(Throughput::Elements(values.len() as u64));
-        group.bench_function(BenchmarkId::new(name, values.len()), move |bencher| {
+        group.bench_function(BenchmarkId::new(name, size), move |bencher| {
             bencher.iter(|| ntt.ntt(&mut values));
         });
     }

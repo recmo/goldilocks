@@ -30,9 +30,9 @@ cargo test --all-features -- --test-threads 1 --nocapture
 Run Criterion benchmarks
 
 ```sh
-cargo bench --all-features --bench criterion
+cargo bench --all-features --bench criterion --package goldilocks-ntt
 
-cargo bench --all-features --bench criterion --package goldilocks-merkle
+cargo bench --all-features --bench criterion --package goldilocks-pcs
 ```
 
 Create a baseline
@@ -89,6 +89,8 @@ RUSTFLAGS="-Awarnings" cargo asm --lib --all-features -p goldilocks-ntt --rust "
 http://fftw.org/fftw-paper-ieee.pdf
 
 https://netlib.org/utk/people/JackDongarra/CCDSC-2014/talk35.pdf
+
+https://users.ece.cmu.edu/~franzf/papers/fft-enc11.pdf
 
 https://github.com/ejmahler/RustFFT
 
