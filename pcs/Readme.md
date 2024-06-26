@@ -3,7 +3,7 @@
 Commit to polynomials in $\mathbb{F}_p[X]$ with
 
 $$
-p = 2^{63} - 2^{32} + 1
+p = 2^{64} - 2^{32} + 1
 $$
 
 
